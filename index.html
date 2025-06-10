@@ -1,0 +1,2491 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Panel Admin Ujian</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  <style>
+    /* General body and layout styles */
+    body {
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f7f6;
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
+      flex-direction: column; /* Changed to column for better login page centering */
+      align-items: center; /* Center horizontally */
+      justify-content: center; /* Center vertically */
+    }
+    .sidebar {
+      width: 80px;
+      background-color: #2c3e50;
+      color: white;
+      padding: 20px 0;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      transition: width 0.3s ease-in-out, padding 0.3s ease-in-out;
+      flex-shrink: 0;
+      z-index: 20;
+    }
+    .sidebar.expanded {
+      width: 200px;
+      padding: 20px;
+    }
+    .main-content {
+      flex-grow: 1;
+      padding: 20px;
+      background-color: #f4f7f6;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      height: 100vh;
+      box-sizing: border-box;
+      width: 100%; /* Ensure main content takes full width when active */
+    }
+    .container {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Sidebar specific styles */
+    .sidebar .logo-container {
+      text-align: center;
+      margin-bottom: 30px;
+      width: 100%;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
+    .sidebar.expanded .logo-container { padding: 0; }
+    .sidebar .logo {
+      width: 50px; height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid #3498db;
+      padding: 3px;
+      background-color: white;
+      transition: width 0.3s ease-in-out, height 0.3s ease-in-out;
+    }
+    .sidebar.expanded .logo { width: 70px; height: 70px; }
+    .sidebar h2 {
+      font-size: 1em;
+      margin-top: 10px;
+      color: #ecf0f1;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+      white-space: nowrap;
+      overflow: hidden;
+      height: 0;
+    }
+    .sidebar.expanded h2 { opacity: 1; height: auto; }
+    .sidebar-nav { width: 100%; flex-grow: 1; }
+    .sidebar-nav button {
+      background-color: transparent;
+      color: white; border: none; padding: 12px 0;
+      margin-bottom: 10px; width: 100%; text-align: center;
+      font-size: 16px; border-radius: 8px; cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease, padding 0.3s ease-in-out;
+      display: flex; align-items: center; justify-content: center; gap: 0;
+    }
+    .sidebar-nav button:hover { background-color: #34495e; transform: translateX(5px); }
+    .sidebar-nav button.active {
+      background-color: #3498db; font-weight: bold;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .sidebar-nav button i { font-size: 18px; flex-shrink: 0; }
+    .sidebar-nav button span {
+      opacity: 0; transition: opacity 0.3s ease-in-out;
+      white-space: nowrap; overflow: hidden; max-width: 0;
+    }
+    .sidebar.expanded .sidebar-nav button { justify-content: flex-start; padding-left: 20px; gap: 10px; }
+    .sidebar.expanded .sidebar-nav button span { opacity: 1; max-width: 150px; }
+    .sidebar .footer {
+      width: 100%; padding: 20px 10px;
+      box-sizing: border-box; opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+      white-space: nowrap; overflow: hidden; text-align: center;
+    }
+    .sidebar.expanded .footer { opacity: 1; }
+
+    /* Forms and Buttons */
+    input, select, textarea {
+      padding: 12px; margin: 8px 0; width: 100%;
+      box-sizing: border-box; font-size: 16px;
+      border: 1px solid #ccc; border-radius: 6px;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #3498db;
+      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+      outline: none;
+    }
+    button {
+      padding: 12px 25px; margin: 10px auto;
+      display: block; font-size: 16px; cursor: pointer;
+      background-color: #3498db; color: white; border: none;
+      border-radius: 6px;
+      transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    button:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .text-button {
+      padding: 10px 20px; margin: 0; font-size: 15px;
+      cursor: pointer; border: none; border-radius: 6px;
+      transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      display: inline-flex; align-items: center; gap: 8px;
+      text-align: center; white-space: nowrap;
+    }
+    .text-button:hover { background-color: #455a64; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+    .text-button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .text-button.blue-gray { background-color: #607d8b; color: white; }
+    .text-button.blue-gray:hover { background-color: #455a64; }
+    .text-button.green { background-color: #4CAF50; color: white; }
+    .text-button.green:hover { background-color: #43A047; }
+    .text-button.red { background-color: #f44336; color: white; }
+    .text-button.red:hover { background-color: #e53935; }
+    .text-button.gray { background-color: #9e9e9e; color: white; }
+    .text-button.gray:hover { background-color: #757575; }
+    .text-button.light-blue { background-color: #2196F3; color: white; }
+    .text-button.light-blue:hover { background-color: #1976D2; }
+    .text-button.orange { background-color: #FF9800; color: white; }
+    .text-button.orange:hover { background-color: #FB8C00; }
+    .icon-button {
+      background: none; border: none; cursor: pointer;
+      padding: 8px; margin: 0; display: inline-flex;
+      align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 50%;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+      flex-shrink: 0;
+    }
+    .icon-button:hover { background-color: #cfe2f3; transform: translateY(-1px); }
+    .icon-button:active { transform: translateY(0); }
+    .icon-button i { font-size: 16px; color: #2c3e50; }
+    .icon-button:hover i { color: #2c3e50; }
+    .icon-button.edit i { color: #3498db; }
+    .icon-button.delete i { color: #e74c3c; }
+    .icon-button.reset i { color: #8e44ad; }
+    .icon-button.submit i { color: #27ae60; }
+    .icon-button.erase i { color: #f39c12; }
+    .icon-button.pdf i { color: #c0392b; }
+
+    /* Tables */
+    .table-responsive {
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #e0e0e0; padding: 10px;
+      word-wrap: break-word; text-align: left;
+      vertical-align: middle;
+    }
+    th {
+      background-color: #ecf0f1; text-align: center;
+      font-weight: bold; color: #2c3e50;
+      white-space: nowrap;
+    }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    #tokenTableBody td, #studentTableBody td, #scoreTableBody td {
+        white-space: nowrap;
+    }
+    #tokenTableBody td.mapel-cell {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+        max-width: 180px;
+    }
+    #tokenTableBody td.mapel-cell .subject-display {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        display: block;
+        font-weight: bold;
+    }
+    #tokenTableBody td.mapel-cell .link-display {
+        display: block;
+        font-size: 0.85em;
+        margin-top: 5px;
+    }
+    #tokenTableBody td.time-cell,
+    #tokenTableBody td.duration-cell {
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    #scoreTableBody td:nth-child(2) {
+        white-space: normal;
+    }
+    
+    .token-status {
+      cursor: pointer;
+      font-weight: bold;
+      text-decoration: underline;
+    }
+    .token-status.on { color: #27ae60; }
+    .token-status.off { color: #e74c3c; }
+    
+    #locationSettingsTableBody td:nth-child(n), #lockSettingsTableBody td:nth-child(n) { text-align: center; }
+    #locationSettingsTableBody td:nth-child(4) button, #lockSettingsTableBody td:nth-child(4) button { display: inline-block; margin: 0; }
+    #tokenTableBody td:nth-child(1) { text-align: center; }
+    #studentTableBody td:nth-child(1), #studentTableBody td:nth-child(2), #studentTableBody td:nth-child(4), #studentTableBody td:nth-child(5), #studentTableBody td:nth-child(6), #studentTableBody td:last-child { text-align: center; }
+    .action-buttons-group { display: flex; justify-content: center; gap: 5px; flex-wrap: nowrap; flex-shrink: 0; }
+
+    #tokenTableBody td:nth-child(3) {
+        text-align: center;
+    }
+    #scoreTableBody td:nth-child(3),
+    #scoreTableBody td:nth-child(n+4) {
+        text-align: center;
+    }
+    
+    /* Modals and Overlays */
+    .modal {
+      display: none; position: fixed; z-index: 1000;
+      left: 0; top: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background: #fff; padding: 30px; border-radius: 10px;
+      width: 90%; max-width: 450px; box-sizing: border-box;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2); text-align: center;
+    }
+    .modal h4 { color: #2c3e50; margin-top: 0; margin-bottom: 20px; font-size: 1.5em; }
+    .modal p { margin-bottom: 20px; color: #34495e; }
+    .modal button {
+      margin: 8px; display: inline-block; width: auto; min-width: 100px;
+      padding: 10px 20px; font-size: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .modal button:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+    .modal button:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .modal button.confirm-button { background-color: #28a745; color: white; }
+    .modal button.confirm-button:hover { background-color: #218838; }
+    .modal button.cancel-button { background-color: #dc3545; color: white; }
+    .modal button.cancel-button:hover { background-color: #c82333; }
+    .modal button.warning-button { background-color: #ffc107; color: black; }
+    .modal button.warning-button:hover { background-color: #e0a800; }
+    .modal button.gray { background-color: #9e9e9e; color: white; }
+    .modal button.gray:hover { background-color: #757575; }
+    .loading-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255, 255, 255, 0.8);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 99999;
+    }
+    .spinner {
+      border: 5px solid rgba(0, 0, 0, 0.1);
+      width: 40px; height: 40px; border-radius: 50%;
+      border-left-color: #3498db;
+      animation: spin 1s ease infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #notification {
+      display: none; position: fixed; top: 20px; left: 50%;
+      transform: translateX(-50%); background-color: #28a745;
+      color: white; padding: 15px 25px; border-radius: 8px;
+      z-index: 10000; text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-weight: bold;
+    }
+    
+    /* Utility and other styles */
+    .error { color: #e74c3c; font-size: 14px; text-align: center; margin-top: 5px; }
+    .footer { text-align: center; margin-top: 20px; color: #7f8c8d; font-size: 13px; }
+    .date-time { font-size: 14px; color: #555; }
+    .controls-header {
+      display: flex;
+      flex-wrap: wrap; /* Allows items to wrap on smaller screens */
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px; /* Spacing between groups */
+      margin-bottom: 20px;
+    }
+    .actions-group, .filters-group {
+      display: flex;
+      flex-wrap: wrap; /* Allows inner items to wrap */
+      gap: 10px; /* Spacing between individual filters/buttons */
+      align-items: center;
+    }
+    .filters-group input,
+    .filters-group select {
+      margin: 0;
+      flex-grow: 1; /* Allow them to grow */
+      min-width: 120px; /* Minimum width before wrapping */
+      max-width: 180px; /* Max width for consistency */
+    }
+    .filters-group label { margin-right: 5px; font-weight: 500; }
+    .answer-key-input-group { display: flex; gap: 10px; align-items: flex-end; margin: 8px 0; }
+    .answer-key-input-group > div { display: flex; flex-direction: column; }
+    .answer-key-input-group label { font-size: 0.8em; color: #555; margin-bottom: 2px; }
+    .answer-key-input-group input { margin: 0; height: auto; }
+    .answer-key-input-group .count-input { flex-shrink: 0; width: 80px; text-align: center; background-color: #e9ecef; cursor: default; }
+    .answer-key-input-group .key-input { flex-grow: 1; }
+
+    /* Pagination styles */
+    .pagination-controls {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        margin-top: 20px;
+        flex-wrap: wrap; /* Allow wrapping on small screens */
+    }
+
+    .pagination-controls button {
+        padding: 8px 15px;
+        margin: 0;
+        font-size: 14px;
+        border-radius: 5px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease, transform 0.1s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .pagination-controls button:hover:not(:disabled) {
+        background-color: #2980b9;
+        transform: translateY(-1px);
+    }
+
+    .pagination-controls button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+        box-shadow: none;
+    }
+
+    .pagination-controls span {
+        font-size: 15px;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+
+    /* Dashboard Specific Styles */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    @media (min-width: 992px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .highlight-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .highlight-card {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .highlight-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.12);
+    }
+    
+    .highlight-card .icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .highlight-card .icon i {
+        font-size: 24px;
+    }
+
+    .highlight-card .icon.active-exams { background-color: #27ae60; }
+    .highlight-card .icon.online-users { background-color: #f39c12; }
+    .highlight-card .icon.submitted-users { background-color: #3498db; }
+    .highlight-card .icon.total-users { background-color: #9b59b6; }
+
+
+    .highlight-card .info h3 {
+        margin: 0;
+        font-size: 1.8em;
+        color: #2c3e50;
+    }
+    
+    .highlight-card .info p {
+        margin: 0;
+        color: #7f8c8d;
+        font-size: 0.9em;
+    }
+    
+    .progress-cards-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .progress-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .progress-card-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid #ecf0f1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .progress-card-header h4 {
+        margin: 0;
+        color: #2c3e50;
+        font-size: 1.1em;
+    }
+    .progress-card-header .token-code {
+        font-size: 0.85em;
+        background-color: #ecf0f1;
+        color: #7f8c8d;
+        padding: 3px 8px;
+        border-radius: 5px;
+    }
+    
+    .progress-card-body {
+        padding: 20px;
+        display: flex;
+        flex-direction: column; /* Changed to column for progress bars */
+        gap: 15px; /* Spacing between progress bars */
+        flex-grow: 1;
+    }
+    
+    /* Updated styles for progress bar: No more absolute positioning for label */
+    .progress-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px; /* Space between text and the bar */
+    }
+
+    .progress-text-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 0.9em;
+        color: #333;
+        font-weight: 500;
+    }
+
+    .progress-bar-container {
+        width: 100%;
+        background-color: #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        height: 25px; /* Height of the bar */
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        border-radius: 8px;
+        transition: width 0.5s ease-in-out;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end; /* Align percentage to the right */
+        padding-right: 8px;
+        box-sizing: border-box;
+        color: white;
+        font-weight: bold;
+        font-size: 0.85em;
+        white-space: nowrap;
+        overflow: hidden; /* Hide overflowing text */
+    }
+
+    .progress-card-footer {
+        background-color: #f9fafb;
+        padding: 10px 20px;
+        border-top: 1px solid #ecf0f1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85em;
+    }
+    .status-text.forced { color: #8e44ad; font-weight: bold; }
+    .status-text.expired { color: #e74c3c; font-weight: bold; }
+    .status-text .countdown { font-weight: bold; }
+    .status-text .end-time { color: #7f8c8d; }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Responsive styles */
+    @media (max-width: 768px) {
+      body { flex-direction: column; }
+      .sidebar { width: 100%; height: auto; position: relative; border-radius: 0; padding: 15px 10px; }
+      .sidebar.expanded { width: 100%; }
+      .sidebar .logo-container { padding: 0; }
+      .sidebar .logo, .sidebar.expanded .logo { width: 40px; height: 40px; }
+      .sidebar h2 { font-size: 0.9em; height: auto; opacity: 1; }
+      .sidebar-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 15px; }
+      .sidebar-nav button { width: auto; padding: 10px 12px; font-size: 14px; flex-grow: 1; justify-content: center; }
+      .sidebar-nav button span, .sidebar.expanded .sidebar-nav button span { display: none; }
+      .sidebar-nav button i { margin-right: 0; }
+      .sidebar .footer { opacity: 1; height: auto; }
+      .main-content { padding: 15px; height: auto; min-height: 100vh; }
+      .container { padding: 15px; }
+      input, select, textarea { font-size: 14px; padding: 10px; }
+      button, .text-button { font-size: 14px; padding: 10px 15px; }
+      table { font-size: 11px; }
+      th, td { padding: 8px; }
+      .action-buttons-group { flex-wrap: wrap; justify-content: center; gap: 3px; }
+      .action-buttons-group .icon-button { width: 24px; height: 24px; }
+      .action-buttons-group .icon-button i { font-size: 14px; }
+    }
+    @media (max-width: 480px) {
+      .sidebar-nav button span { display: none; }
+      .sidebar-nav button { padding: 10px; }
+      .controls-header { justify-content: center; }
+      .pagination-controls {
+          flex-direction: column;
+          gap: 5px;
+      }
+      .pagination-controls button {
+          width: 80%; /* Make buttons wider on small screens */
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar Navigation -->
+  <div class="sidebar" id="sidebar">
+    <div class="logo-container">
+      <img src="https://raw.githubusercontent.com/smp2pajangan/gambar/refs/heads/main/logosmpn2pjg.png" alt="Logo SMPN 2 Pajangan" class="logo">
+      <h2>SMPN 2 PAJANGAN</h2> </div>
+    <nav class="sidebar-nav">
+      <button id="dashboardMenuBtn" data-section-id="dashboardSection" onclick="handleMenuClick(this)">
+        <i class="fas fa-tachometer-alt"></i> <span>Dashboard</span>
+      </button>
+      <button id="tokenMenuBtn" data-section-id="tokenSection" onclick="handleMenuClick(this)">
+        <i class="fas fa-key"></i> <span>Token</span>
+      </button>
+      <button id="pesertaMenuBtn" data-section-id="studentSection" onclick="handleMenuClick(this)">
+        <i class="fas fa-users"></i> <span>Peserta</span>
+      </button>
+      <button id="scoreMenuBtn" data-section-id="scoreSection" onclick="handleMenuClick(this)">
+        <i class="fas fa-chart-bar"></i> <span>Nilai Ujian</span>
+      </button>
+      <button id="backupRestoreMenuBtn" data-section-id="backupRestoreSection" onclick="handleMenuClick(this)">
+        <i class="fas fa-database"></i> <span>Backup</span>
+      </button>
+      <button id="aturanMenuBtn" data-section-id="rulesSection" onclick="handleMenuClick(this)">
+        <i class="fas fa-cog"></i> <span>Aturan</span>
+      </button>
+      <button data-action="promptLogout" onclick="handleMenuClick(this)">
+        <i class="fas fa-sign-out-alt"></i> <span>Keluar</span>
+      </button>
+    </nav>
+    <div class="footer" style="margin-top: auto; padding-top: 20px;">
+      <div>@Admin SMPN 2 Pajangan</div>
+      <div id="adminDateTime" class="date-time" style="color: #bdc3c7;"></div>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="main-content" id="mainContent">
+    <!-- Login Section -->
+    <div class="container" id="loginSection" style="max-width: 400px; margin: auto;">
+      <h3 style="text-align: center; color: #2c3e50;">LOGIN ADMINISTRASI</h3>
+      <p id="loginError" class="error"></p>
+      <input type="text" id="username" placeholder="Username" />
+      <input type="password" id="password" placeholder="Password" />
+      <button onclick="login()">Login</button>
+      <div class="footer">
+        <div>@Admin SMPN 2 Pajangan</div>
+        <div id="currentTime" class="date-time"></div>
+      </div>
+    </div>
+
+    <!-- Dashboard Content (hidden by default) -->
+    <div id="dashboardContent" style="display:none;">
+      <!-- Dashboard Section -->
+      <div id="dashboardSection" class="dashboard-section container">
+        <div class="highlight-cards" id="highlightCards">
+           <!-- Highlight cards will be generated here -->
+        </div>
+        <div class="dashboard-grid">
+            <div class="progress-cards-container" id="progressCardsContainer">
+                <!-- Progress cards will be generated here -->
+            </div>
+        </div>
+      </div>
+
+      <!-- Token Management Section -->
+      <div id="tokenSection" class="dashboard-section container">
+        <h1 id="tokenSectionTitle" style="text-align: left; color: #34495e;">Manajemen Token</h1>
+        <div class="controls-header">
+            <div class="actions-group">
+                <button onclick="openAddTokenModal()" class="text-button green">
+                    <i class="fas fa-plus"></i> Tambah Token
+                </button>
+                <button class="text-button gray" onclick="openCopyPrintModal('tokenTable', 'Cetak Daftar Token')"><i class="fas fa-print"></i> Cetak</button>
+                <button class="text-button red" onclick="promptEmptyTokens()"><i class="fas fa-trash-alt"></i> Kosongkan</button>
+            </div>
+            <div class="filters-group">
+                 <input type="text" id="tokenSearchSubject" placeholder="Cari Mapel..." />
+            </div>
+        </div>
+        <p style="font-size: 11px; color: #555; margin-top: 10px; margin-bottom: 10px; text-align: center;">
+          Token yang ditambahkan akan dihapus otomatis setelah 30 hari!
+        </p>
+        <div class="table-responsive">
+          <table id="tokenTable">
+            <thead>
+              <tr>
+                <th>NO</th>
+                <th>MAPEL</th>
+                <th>KELAS</th>
+                <th>TOKEN</th>
+                <th class="time-cell">DIBUKA</th>
+                <th class="time-cell">DITUTUP</th>
+                <th class="duration-cell">DURASI</th>
+                <th style="text-align: center;">PROGRES</th>
+                <th>AKSI</th>
+              </tr>
+            </thead>
+            <tbody id="tokenTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Rules Section -->
+      <div id="rulesSection" class="dashboard-section container">
+        <h1 id="rulesSectionTitle" style="text-align: left; margin-bottom: 20px; color: #34495e;">Pengaturan Lokasi dan Penguncian</h1>
+        
+        <div style="margin-bottom: 20px;">
+          <h3>ATUR AKSES LOKASI</h3>
+          <p style="text-align: left; font-size: 0.9em; color: #555; margin-top: 5px; margin-bottom: 15px;">
+            Aturan akses lokasi digunakan untuk mengatur akses login siswa hanya sesuai radius lokasi saja.
+          </p>
+          <div class="table-responsive">
+            <table id="locationSettingsTable">
+              <thead>
+                <tr>
+                  <th>KOORDINAT LOKASI</th>
+                  <th>RADIUS</th>
+                  <th>STATUS</th>
+                  <th>AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="locationSettingsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+          <h3>ATUR KUNCI</h3>
+          <p style="text-align: left; font-size: 0.9em; color: #555; margin-top: 5px; margin-bottom: 15px;">
+            Aturan kunci digunakan untuk mengatur kunci yang harus dimasukkan siswa ketika mereka sedang terkunci karena keluar dalam mode fullscreen dengan melebihi batas toleransi.
+          </p>
+          <div class="table-responsive">
+            <table id="lockSettingsTable">
+              <thead>
+                <tr>
+                  <th>KUNCI</th>
+                  <th>BATAS TOLERANSI</th>
+                  <th>STATUS</th>
+                  <th>AKSI</th>
+                </tr>
+              </thead>
+              <tbody id="lockSettingsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Student Management Section -->
+      <div id="studentSection" class="dashboard-section container">
+        <h1 id="studentSectionTitle" style="text-align: left; margin-bottom: 20px; color: #34495e;">Manajemen Peserta</h1>
+        <div class="controls-header">
+            <div class="actions-group">
+                <button onclick="openAddStudentModal()" class="text-button green"><i class="fas fa-user-plus"></i> Tambah</button>
+                <button class="text-button blue-gray" onclick="openImportStudentModal()"><i class="fas fa-file-csv"></i> Impor</button>
+                <button class="text-button gray" onclick="showPrintInfoModal()"><i class="fas fa-print"></i> Cetak Kartu</button>
+                <button class="text-button red" onclick="openEmptyStudentsModal()"><i class="fas fa-trash-alt"></i> Kosongkan</button>
+            </div>
+        </div>
+        <div class="controls-header">
+            <div class="filters-group" style="flex-grow: 1; justify-content: flex-start; align-items: flex-end; width: 100%;">
+                <input type="text" id="studentSearchId" placeholder="Cari ID..." style="max-width: 150px;"/>
+                <input type="text" id="studentSearchName" placeholder="Cari Nama..." style="max-width: 200px;" />
+                <input type="text" id="studentSearchClass" placeholder="Cari Kelas..." style="max-width: 150px;" />
+                <select id="examStatusFilter">
+                    <option value="">PILIH TOKEN UJIAN</option>
+                </select>
+                <select id="studentOverallStatusFilter" onchange="window.renderStudentTable(1)">
+                    <option value="ALL" selected>SEMUA STATUS</option>
+                    <option value="Sudah submit">Sudah Submit</option>
+                    <option value="Sedang mengerjakan">Sedang Mengerjakan</option>
+                    <option value="Belum login (reset)">Belum Login (Reset)</option>
+                    <option value="Belum login">Belum Login</option>
+                    <option value="-">Tidak Ada Ujian Relevan (-)</option>
+                </select>
+                <select id="itemsPerPageSelect" onchange="window.updateItemsPerPage(this.value)">
+                    <option value="25">25 per halaman</option>
+                    <option value="50">50 per halaman</option>
+                    <option value="75" selected>75 per halaman</option>
+                    <option value="100">100 per halaman</option>
+                    <option value="200">200 per halaman</option>
+                    <option value="500">500 per halaman</option>
+                    <option value="1000">1000 per halaman</option>
+                </select>
+            </div>
+        </div>
+        <div class="table-responsive">
+          <table id="studentTable">
+            <thead>
+              <tr>
+                <th>NO</th>
+                <th>ID SISWA</th>
+                <th>NAMA</th>
+                <th>KELAS</th>
+                <th>RUANG</th>
+                <th>STATUS</th>
+                <th>AKSI</th>
+              </tr>
+            </thead>
+            <tbody id="studentTableBody"></tbody>
+          </table>
+        </div>
+        <div id="studentPagination" class="pagination-controls"></div>
+      </div>
+
+      <!-- Score Section -->
+      <div id="scoreSection" class="dashboard-section container">
+        <h1 id="scoreSectionTitle" style="text-align: left; margin-bottom: 20px; color: #34495e;">Daftar Nilai Ujian</h1>
+        <div class="controls-header">
+            <div class="actions-group">
+                <button class="text-button light-blue" onclick="window.currentScoreGradeFilter = '7'; window.renderScoreTable(1);"><i class="fas fa-graduation-cap"></i> Kelas 7</button>
+                <button class="text-button light-blue" onclick="window.currentScoreGradeFilter = '8'; window.renderScoreTable(1);"><i class="fas fa-graduation-cap"></i> Kelas 8</button>
+                <button class="text-button light-blue" onclick="window.currentScoreGradeFilter = '9'; window.renderScoreTable(1);"><i class="fas fa-graduation-cap"></i> Kelas 9</button>
+                <button class="text-button gray" onclick="openCopyPrintModal('scoreTable', 'Cetak Daftar Nilai')"><i class="fas fa-print"></i> Cetak</button>
+            </div>
+            <div class="filters-group">
+                <input type="text" id="scoreSearchName" placeholder="Cari Nama Siswa" />
+                <input type="text" id="scoreSearchClass" placeholder="Cari Kelas (misal: 7A)" />
+            </div>
+        </div>
+        <p id="scoreTableMessage" style="text-align: center; color: #555; font-style: italic; margin: 20px 0;">Pilih tingkatan kelas untuk menampilkan daftar nilai.</p>
+        <div class="table-responsive">
+          <table id="scoreTable">
+            <thead id="scoreTableHeader">
+            </thead>
+            <tbody id="scoreTableBody">
+            </tbody>
+          </table>
+        </div>
+        <div id="scorePagination" class="pagination-controls"></div>
+      </div>
+
+      <!-- Backup & Restore Section -->
+      <div id="backupRestoreSection" class="dashboard-section container">
+        <h1 style="text-align: left; color: #34495e;">Backup & Restore Data</h1>
+        <p style="text-align: left; font-size: 0.9em; color: #555; margin-top: 5px; margin-bottom: 15px;">
+          Di sini Anda dapat melakukan backup seluruh data (token, peserta, nilai dan aturan ujian) kemudian dapat memulihkan data jika terjadi masalah.
+        </p>
+        <p style="text-align: left; font-size: 0.9em; color: red; font-weight: bold; margin-top: 5px; margin-bottom: 15px;">
+          Peringatan: Memulihkan data akan MENIMPA (MENGGANTI) SEMUA DATA yang sudah ada. Lakukan dengan hati hati!
+        </p>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+            <button class="text-button blue-gray" onclick="performBackup()"><i class="fas fa-download"></i> Unduh Data Backup</button>
+            <button class="text-button orange" onclick="openRestorePasswordModal()"><i class="fas fa-upload"></i> Unggah & Pulihkan Data</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- All Modals -->
+  <div id="addTokenModal" class="modal">
+    <div class="modal-content">
+      <h4>Tambah Token Baru</h4>
+      <form id="addTokenForm">
+        <label>Mata Pelajaran</label>
+        <input type="text" id="addSubject" placeholder="Gunakan kapital" required />
+        <label>Kelas (7, 8, atau 9)</label>
+        <input type="text" id="addKelas" placeholder="Berupa angka saja" required />
+        <label>Token Ujian (Base Token)</label>
+        <input type="text" id="addToken" placeholder="Berupa huruf/angka (gunakan kapital)" required />
+        
+        <label for="addGoogleDriveUrl">Link Google Drive PDF Soal</label>
+        <input type="url" id="addGoogleDriveUrl" placeholder="Contoh: https://drive.google.com/file/d/..." required />
+        <p id="addGoogleDriveUrlError" class="error"></p>
+
+        <div class="answer-key-input-group">
+          <div class="count-input-container">
+            <label for="addAnswerKeyCount">Jumlah Soal</label>
+            <input type="text" id="addAnswerKeyCount" readonly class="count-input" value="0" />
+          </div>
+          <div class="key-input-container">
+            <label for="addAnswerKey">Kunci Jawaban</label>
+            <input type="text" id="addAnswerKey" placeholder="Contoh: A,B,C,D,D" required class="key-input" />
+          </div>
+        </div>
+        <p id="addAnswerKeyError" class="error"></p>
+
+        <label>Waktu Token Dibuka</label>
+        <input type="datetime-local" id="addStartTime" required />
+        <label>Waktu Token Ditutup</label>
+        <input type="datetime-local" id="addEndTime" required />
+        <p id="addErrorMsg" class="error"></p>
+        <button type="submit">Tambah Token</button>
+        <button type="button" onclick="closeAddTokenModal()" class="cancel-button">Batal</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h4>Edit Token</h4>
+      <form id="modalForm">
+        <label>Mata Pelajaran</label>
+        <input type="text" id="editSubject" required />
+        <label>Kelas (7, 8, atau 9)</label>
+        <input type="text" id="editKelas" placeholder="Berupa angka saja" required />
+        <label>Token Ujian</label>
+        <input type="text" id="editToken" required />
+        
+        <label for="editGoogleDriveUrl">Link Google Drive PDF Soal</label>
+        <input type="url" id="editGoogleDriveUrl" placeholder="Contoh: https://drive.google.com/file/d/FILE_ID/view?usp=sharing" required />
+        <p id="editGoogleDriveUrlError" class="error"></p>
+
+        <div class="answer-key-input-group">
+          <div class="count-input-container">
+            <label for="editAnswerKeyCount">Jumlah Soal</label>
+            <input type="text" id="editAnswerKeyCount" readonly class="count-input" value="0" />
+          </div>
+          <div class="key-input-container">
+            <label for="editAnswerKey">Kunci Jawaban</label>
+            <input type="text" id="editAnswerKey" placeholder="Hanya A,B,C,D dipisah koma" required class="key-input" />
+          </div>
+        </div>
+        <p id="editAnswerKeyError" class="error"></p>
+
+        <label>Waktu Token Dibuka</label>
+        <input type="datetime-local" id="editStartTime" required />
+        <label>Waktu Token Ditutup</labeL>
+        <input type="datetime-local" id="editEndTime" required />
+        <p id="editErrorMsg" class="error"></p>
+        <button type="submit">Simpan</button>
+        <button type="button" onclick="closeEditModal()" class="cancel-button">Batal</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="addStudentModal" class="modal">
+      <div class="modal-content">
+          <h4>Tambah Peserta Baru</h4>
+          <form id="addStudentForm">
+              <p id="addStudentErrorMsg" class="error"></p>
+              <label for="newStudentId">ID Siswa</label>
+              <input type="text" id="newStudentId" placeholder="Contoh: 001" required />
+              <label for="newStudentName">Nama Siswa</label>
+              <input type="text" id="newStudentName" placeholder="Nama Lengkap Siswa" required />
+              <label for="newStudentClass">Kelas</label>
+              <input type="text" id="newStudentClass" placeholder="Contoh: 7A, 8B, 9C" required />
+              <label for="newStudentRoom">Ruang</label>
+              <input type="text" id="newStudentRoom" placeholder="Contoh: 01, 02, dsb" required />
+              <button type="submit">Tambah Peserta</button>
+              <button type="button" onclick="closeAddStudentModal()" class="cancel-button">Batal</button>
+          </form>
+      </div>
+  </div>
+
+
+  <div id="deleteModal" class="modal"><div class="modal-content"><p>Yakin ingin menghapus token ini?</p><button onclick="confirmDelete()" class="confirm-button">Hapus</button><button onclick="closeDeleteModal()" class="cancel-button">Batal</button></div></div>
+  <div id="forceActiveModal" class="modal"><div class="modal-content"><h4>Aktifkan Token Secara Paksa?</h4><p>Token ini akan dapat diakses kapanpun, mengabaikan jadwal yang ada.</p><div><label for="forceActivePassword">Password Admin:</label><input type="password" id="forceActivePassword"><p id="forceActivePasswordError" class="error"></p></div><button onclick="confirmForceActive()" class="confirm-button">Ya, Aktifkan</button><button onclick="closeForceActiveModal()" class="cancel-button">Batal</button></div></div>
+  <div id="forceInactiveModal" class="modal"><div class="modal-content"><h4>Nonaktifkan Mode Paksa?</h4><p>Token akan kembali ke pengaturan jadwal semula.</p><button onclick="confirmForceInactive()" class="confirm-button">Ya, Nonaktifkan</button><button onclick="closeForceInactiveModal()" class="cancel-button">Batal</button></div></div>
+  <div id="notification"><span id="notificationMessage"></span></div>
+  <div id="copyPrintModal" class="modal"><div class="modal-content"><h4 id="copyPrintModalTitle"></h4><button onclick="copyTableToClipboard()" class="confirm-button">Salin Tabel</button><p style="font-size: 0.9em; color: #555; margin-top: 15px;">Salin tabel kemudian paste ke word atau excel.</p><button onclick="closeCopyPrintModal()" class="cancel-button">Batal</button></div></div>
+  <div id="printInfoModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closePrintInfoModal()">×</span><p style="margin-bottom: 20px;">Maaf, sementara cetak kartu belum bisa. Silahkan download 2 file excel dan word dibawah ini:</p><p style="margin-bottom: 10px;"><a href="https://drive.google.com/uc?export=download&id=1rLFyKUzQloJi7LAnO-x7Q-lK0BzdxQv3" target="_blank">File Word (disini)</a></p><p style="margin-bottom: 20px;"><a href="https://drive.google.com/uc?export=download&id=14uoOXQScECxd9hXD4AIMJjFBlmbSAgxS" target="_blank">File Excel (disini)</a></p><p style="font-size: 14px; color: #555;">**Catatan:** ISI ID_SISWA SESUAI DENGAN TEMPLATE CSV!</p></div></div>
+  <div id="setlokasiModal" class="modal"><div class="modal-content" style="text-align: center;"><h4>Pengaturan Lokasi</h4><button onclick="aktifkanLokasi()" class="confirm-button">Aktifkan</button><button onclick="openGantiRadiusModal()" class="warning-button">Ganti Radius</button><button onclick="nonaktifkanLokasi()" class="cancel-button">Nonaktifkan</button><button onclick="closeSetlokasiModal()" class="gray text-button" style="margin-top: 10px;">Batal</button></div></div>
+  <div id="gantiRadiusModal" class="modal"><div class="modal-content"><h4>Ganti Radius Lokasi (meter)</h4><label for="radiusMeter">Radius (meter):</label><input type="number" id="radiusMeter" placeholder="Contoh: 75" required /><div style="text-align: center; margin-top: 10px;"><button onclick="gantiRadiusDanAktifkan()" class="confirm-button">Ganti & Aktifkan</button><button onclick="closeGantiRadiusModal()" class="cancel-button">Batal</button></div></div></div>
+  <div id="setLockModal" class="modal"><div class="modal-content" style="text-align: center;"><h4>Pengaturan Kunci</h4><button onclick="aktifkanKunci()" class="confirm-button">Aktifkan</button><button onclick="openGantiKunciBatasModal()" class="warning-button">Ganti Kunci/Batas</button><button onclick="nonaktifkanKunci()" class="cancel-button">Nonaktifkan</button><button onclick="closeSetLockModal()" class="gray text-button" style="margin-top: 10px;">Batal</button></div></div>
+  <div id="gantiKunciBatasModal" class="modal"><div class="modal-content"><h4>Ganti Kunci dan Batas Toleransi</h4><label for="lockKeyInput">Kunci:</label><input type="text" id="lockKeyInput" placeholder="Contoh: KUNCIAMAN" required /><label for="toleranceLimitInput">Batas Toleransi:</label><input type="number" id="toleranceLimitInput" placeholder="Contoh: 3" required /><p id="lockSettingsError" class="error"></p><div style="text-align: center; margin-top: 10px;"><button onclick="gantiKunciDanBatas()" class="confirm-button">Ganti & Aktifkan</button><button onclick="closeGantiKunciBatasModal()" class="cancel-button">Batal</button></div></div></div>
+  <div id="accessDetailModal" class="modal"><div class="modal-content" style="max-width: 700px;"><h4 id="accessDetailTokenTitle">Detail Akses Token: [Token]</h4><div class="table-responsive"><table id="accessDetailTable"><thead><tr><th>NO</th><th>ID SISWA</th><th>NAMA SISWA</th><th>KELAS</th><th>STATUS AKSES</th><th>WAKTU AKSES PERTAMA</th></tr></thead><tbody id="accessDetailTableBody"></tbody></table></div><button onclick="closeAccessDetailModal()" style="margin-top: 20px;">Tutup</button></div></div>
+  <div id="editStudentModal" class="modal"><div class="modal-content"><h4>Edit Data Siswa</h4><p id="editStudentErrorMsg" class="error"></p><label for="modalStudentId">ID Siswa</label><input type="text" id="modalStudentId" required /><label for="modalStudentName">Nama Siswa</label><input type="text" id="modalStudentName" required /><label for="modalStudentClass">Kelas</label><input type="text" id="modalStudentClass" placeholder="Contoh: 7A, 7B, 7C" required /><label for="modalStudentRoom">Ruang</label><input type="text" id="modalStudentRoom" placeholder="Contoh: 01, 02, dsb" required /> <button onclick="confirmEditStudent()">Simpan</button><button type="button" onclick="closeEditStudentModal()" class="cancel-button">Batal</button></div></div>
+  <div id="deleteStudentConfirmModal" class="modal"><div class="modal-content"><p>Yakin ingin menghapus siswa ini?</p><button onclick="confirmDeleteStudent()" class="confirm-button">Hapus</button><button onclick="closeDeleteStudentConfirmModal()" class="cancel-button">Batal</button></div></div>
+  <div id="importStudentModal" class="modal"><div class="modal-content"><h4>Import Data Peserta dari CSV</h4><p style="font-size: 0.9em; color: #555; text-align: left;">Perhatikan hal-hal berikut!<br>1. Siapkan data peserta dengan 4 kolom: ID Peserta (angka), Nama Lengkap, Kelas, dan Ruang<br>2. Simpan file dengan format *.csv (comma delimited)<br>3. Pastikan tidak ada kolom tambahan</p><a href="https://drive.google.com/uc?export=download&id=16rzsLjQ3AVm0wIPqWnzsauzbrwGfO7An" target="_blank" style="display: block; text-align: center; margin: 15px 0; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px;">Unduh Template CSV</a> <input type="file" id="csvFileInput" accept=".csv" style="margin-top: 15px; margin-bottom: 10px;" /><p id="importFileError" class="error"></p><button onclick="processCsvFile()">Mulai Impor</button><button onclick="closeImportStudentModal()" class="cancel-button">Batal</button></div></div>
+  <div id="importResultModal" class="modal"><div class="modal-content"><h4>Hasil Impor Data Siswa</h4><p id="importResultSummary"></p><ul id="importResultDetails" style="text-align: left; max-height: 200px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 5px;"></ul><button onclick="closeImportResultModal()">Tutup</button></div></div>
+  <div id="emptyStudentsModal" class="modal"><div class="modal-content"><h4>Kosongkan Daftar Peserta</h4><p>Anda yakin ingin menghapus <b>SEMUA</b> data peserta? Tindakan ini tidak dapat dibatalkan.</p><div><label for="emptyStudentsPassword">Password Admin:</label><input type="password" id="emptyStudentsPassword"><p id="emptyStudentsPasswordError" class="error"></p></div><button onclick="confirmEmptyStudents()" class="confirm-button">Konfirmasi Hapus Semua</button><button onclick="closeEmptyStudentsModal()" class="cancel-button">Batal</button></div></div>
+  <div id="logoutConfirmModal" class="modal"><div class="modal-content"><h4>Konfirmasi Logout</h4><p>Anda yakin ingin keluar dari panel admin?</p><button onclick="confirmLogout()" class="confirm-button">Ya, Keluar</button><button onclick="closeLogoutModal()" class="cancel-button">Batal</button></div></div>
+  <div id="resetStudentModal" class="modal"><div class="modal-content"><h4>Reset Status Login Siswa</h4><p>Anda yakin ingin mereset status login siswa <b id="resetStudentNameDisplay"></b> (ID: <b id="resetStudentIdDisplay"></b>)?</p><p style="font-size: 0.9em; color: #555;">Ini akan memaksa siswa untuk login ulang jika mereka sedang dalam sesi.</p><button onclick="closeResetStudentModal()" class="cancel-button">Batal</button><button onclick="confirmResetStudent()" class="confirm-button">Reset</button></div></div>
+  <div id="submitAnswerModal" class="modal"><div class="modal-content"><h4>Kirim Jawaban Siswa (Manual)</h4><p>Anda yakin ingin menandai semua ujian yang sedang dikerjakan siswa <b id="submitStudentNameDisplay"></b> (ID: <b id="submitStudentIdDisplay"></b>) sebagai 'Sudah submit'?</p><p style="font-size: 0.9em; color: #555;">Tindakan ini akan mengunci jawaban siswa untuk ujian yang relevan.</p><button onclick="closeSubmitAnswerModal()" class="cancel-button">Batal</button><button onclick="confirmSubmitAnswer()" class="confirm-button">Kirim Jawaban</button></div></div>
+  <div id="deleteAnswerModal" class="modal"><div class="modal-content"><h4>Hapus Semua Jawaban Siswa</h4><p>Anda yakin ingin menghapus <b>SEMUA</b> jawaban dan status submit untuk siswa <b id="deleteAnswerStudentNameDisplay"></b> (ID: <b id="deleteAnswerStudentIdDisplay"></b>)?</p><p style="font-size: 0.9em; color: #e74c3c; font-weight: bold;">Tindakan ini tidak dapat dibatalkan!</p><div><label for="deleteAnswerPassword">Password Admin:</label><input type="password" id="deleteAnswerPassword"><p id="deleteAnswerPasswordError" class="error"></p></div><button onclick="closeDeleteAnswerModal()" class="cancel-button">Batal</button><button onclick="confirmDeleteAnswer()" class="confirm-button">Hapus Jawaban</button></div></div>
+  <div id="loadingOverlay" class="loading-overlay" style="display: none;"><div class="spinner"></div></div>
+  
+  <div id="emptyTokensModal" class="modal">
+      <div class="modal-content">
+          <h4>Kosongkan Semua Token?</h4>
+          <p>Anda yakin ingin menghapus <b>SEMUA</b> token dan data terkait (akses, submit, jawaban siswa)? Tindakan ini tidak dapat dibatalkan.</p>
+          <div>
+              <label for="emptyTokensPassword">Password Admin:</label>
+              <input type="password" id="emptyTokensPassword">
+              <p id="emptyTokensPasswordError" class="error"></p>
+          </div>
+          <button onclick="closeEmptyTokensModal()" class="cancel-button">Batal</button>
+          <button onclick="confirmEmptyTokens()" class="confirm-button">Konfirmasi Hapus Semua</button>
+      </div>
+  </div>
+
+  <div id="restoreModal" class="modal">
+    <div class="modal-content">
+      <h4>Pulihkan Data dari Backup</h4>
+      <p style="text-align: center; color: red; font-weight: bold;">
+        PERINGATAN: Tindakan ini akan MENIMPA SEMUA DATA yang ada di database Anda dengan data dari file backup.
+        Pastikan Anda mengunggah file backup yang benar.
+      </p>
+      <input type="file" id="backupFileInput" accept=".json" style="margin-top: 15px; margin-bottom: 10px;" />
+      <p id="restoreFileError" class="error"></p>
+      <button onclick="confirmRestore()" class="confirm-button">Pulihkan</button>
+      <button onclick="closeRestoreModal()" class="cancel-button">Batal</button>
+    </div>
+  </div>
+
+  <!-- New restore password modal -->
+  <div id="restorePasswordModal" class="modal">
+      <div class="modal-content">
+          <h4>Verifikasi Admin untuk Pulihkan Data</h4>
+          <p>Masukkan password admin untuk melanjutkan proses pemulihan data.</p>
+          <div>
+              <label for="restoreAdminPassword">Password Admin:</label>
+              <input type="password" id="restoreAdminPassword">
+              <p id="restoreAdminPasswordError" class="error"></p>
+          </div>
+          <button onclick="checkRestoreAdminPassword()" class="confirm-button">Lanjutkan</button>
+          <button onclick="closeRestorePasswordModal()" class="cancel-button">Batal</button>
+      </div>
+  </div>
+
+  <!-- JavaScript Module -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getDatabase, ref, push, onValue, update, remove, runTransaction, get, set } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+
+    const allFirebaseConfigs = {
+        '7ABC': { apiKey: "AIzaSyBJBl_HWsOsnBBI1EPs1yQlJd0Hso8HcSo", authDomain: "ujianpdf-7abc.firebaseapp.com", databaseURL: "https://ujianpdf-7abc-default-rtdb.firebaseio.com", projectId: "ujianpdf-7abc", storageBucket: "ujianpdf-7abc.appspot.com", messagingSenderId: "1035978389542", appId: "1:1035978389542:web:413eb32b04c0d09bc48ee7" },
+        '7DEF': { apiKey: "AIzaSyDQKdbwaG0Tg7_tfHs0hCbNR3xlqT3vWLA", authDomain: "ujianpdf-7def.firebaseapp.com", databaseURL: "https://ujianpdf-7def-default-rtdb.firebaseio.com", projectId: "ujianpdf-7def", storageBucket: "ujianpdf-7def.appspot.com", messagingSenderId: "210211262444", appId: "1:210211262444:web:a06a988913ede65369bac9" },
+        '8ABC': { apiKey: "AIzaSyAsbVn2qVIgH278ZjPfkMihlGYmyL8zJFA", authDomain: "ujianpdf8abc-3bedf.firebaseapp.com", databaseURL: "https://ujianpdf8abc-3bedf-default-rtdb.firebaseio.com", projectId: "ujianpdf8abc-3bedf", storageBucket: "ujianpdf8abc-3bedf.appspot.com", messagingSenderId: "408487358048", appId: "1:408487358048:web:10cc8796510f4b8ab99d05" },
+        '8DEF': { apiKey: "AIzaSyBvkIMTkJkDqe2nKspIMXOCeT9vc6h8xjA", authDomain: "ujianpdf8def-9bdcd.firebaseapp.com", databaseURL: "https://ujianpdf8def-9bdcd-default-rtdb.firebaseio.com", projectId: "ujianpdf8def-9bdcd", storageBucket: "ujianpdf8def-9bdcd.appspot.com", messagingSenderId: "69381651529", appId: "1:69381651529:web:af517e87735d2ad51a9398" },
+        '9ABC': { apiKey: "AIzaSyCjf42a3CCB3IuNto2K8MGpTX_SM1FXyrw", authDomain: "ujianpdf-9abc.firebaseapp.com", databaseURL: "https://ujianpdf-9abc-default-rtdb.firebaseio.com", projectId: "ujianpdf-9abc", storageBucket: "ujianpdf-9abc.appspot.com", messagingSenderId: "939178637981", appId: "1:939178637981:web:b9a15dfa72180d15d77274" },
+        '9DEF': { apiKey: "AIzaSyDK50Amn6N8gl_q6CVhDjV_DRPpdCpCTrw", authDomain: "ujianpdf-9def.firebaseapp.com", databaseURL: "https://ujianpdf-9def-default-rtdb.firebaseio.com", projectId: "ujianpdf-9def", storageBucket: "ujianpdf-9def.appspot.com", messagingSenderId: "450883192159", appId: "1:450883192159:web:6ad39c42db5756ff0f62ea" }
+    };
+    
+    const dbInstances = {};
+    for (const groupKey in allFirebaseConfigs) {
+        if (allFirebaseConfigs.hasOwnProperty(groupKey)) {
+            const config = allFirebaseConfigs[groupKey];
+            const appInstance = initializeApp(config, groupKey); 
+            dbInstances[groupKey] = getDatabase(appInstance);
+        }
+    }
+    
+    const gradeToDbGroupMap = {
+        '7': ['7ABC', '7DEF'],
+        '8': ['8ABC', '8DEF'],
+        '9': ['9ABC', '9DEF']
+    };
+
+    const rombelToDbMap = {
+        '7A': '7ABC', '7B': '7ABC', '7C': '7ABC', '7D': '7DEF', '7E': '7DEF', '7F': '7DEF',
+        '8A': '8ABC', '8B': '8ABC', '8C': '8ABC', '8D': '8DEF', '8E': '8DEF', '8F': '8DEF',
+        '9A': '9ABC', '9B': '9ABC', '9C': '9ABC', '9D': '9DEF', '9E': '9DEF', '9F': '9DEF'
+    };
+
+    const ADMIN_USER = "admin";
+    const ADMIN_PASS = "12345678";
+    const THIRTY_DAYS_IN_MS = 30 * 24 * 60 * 60 * 1000;
+    const INACTIVITY_TIMEOUT = 60 * 60 * 1000;
+    const VALID_ROMBELS = Object.keys(rombelToDbMap);
+    const defaultLocationCoordinate = "-7.8589546,110.2655596";
+    
+    let inactivityTimer;
+    let isSidebarExpanded = false;
+    let isImporting = false;
+    
+    let tokenCache = [];
+    let studentCache = [];
+    let tokenAccessStatus = {};
+    let submittedExamsCache = {};
+    let studentAnswersCache = {};
+    let consolidatedTokensMap = new Map();
+    let countdownIntervals = {};
+
+    let currentConsolidatedTokenInfo = null;
+    let currentStudentKey = null;
+    let deleteStudentKey = null;
+    let studentKeyForAction = null;
+    let studentIdForAction = null;
+    let studentNameForAction = null;
+    let studentClassForAction = null;
+    let currentTableIdToCopy = '';
+
+    let selectedItemsPerPage = 75;
+    let currentPageStudent = 1;
+    let currentPageScore = 1;
+    let filteredStudents = [];
+    let filteredScores = [];
+    window.currentScoreGradeFilter = 'ALL';
+    
+    let isLocationEnabledAdmin = false;
+    let allowedRadiusMeterAdmin = 75;
+    let isLockEnabledAdmin = false;
+    let currentLockKeyAdmin = "KUNCI";
+    let toleranceLimitAdmin = 3;
+    const allSetlokasiRefs = Object.values(dbInstances).map(db => ref(db, 'setlokasi'));
+    const allLockSettingsRefs = Object.values(dbInstances).map(db => ref(db, 'lock_settings'));
+    
+    const sidebar = document.getElementById('sidebar');
+    const loginSection = document.getElementById('loginSection');
+    const dashboardContent = document.getElementById('dashboardContent');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const highlightCardsContainer = document.getElementById('highlightCards');
+    const progressCardsContainer = document.getElementById('progressCardsContainer');
+    const tokenTableBody = document.getElementById('tokenTableBody');
+    const studentTableBody = document.getElementById('studentTableBody');
+    const examStatusFilterDropdown = document.getElementById('examStatusFilter');
+    const studentOverallStatusFilter = document.getElementById('studentOverallStatusFilter');
+    const itemsPerPageSelect = document.getElementById('itemsPerPageSelect');
+    const scoreTableHeader = document.getElementById('scoreTableHeader');
+    const scoreTableBody = document.getElementById('scoreTableBody');
+    const scoreTableMessage = document.getElementById('scoreTableMessage');
+    const locationSettingsTableBody = document.getElementById('locationSettingsTableBody');
+    const lockSettingsTableBody = document.getElementById('lockSettingsTableBody');
+    const studentPaginationDiv = document.getElementById('studentPagination');
+    const scorePaginationDiv = document.getElementById('scorePagination');
+
+    const padStudentId = (id) => String(id).padStart(3, '0');
+    const padRoomNumber = (room) => { if (!room) return '-'; const numRoom = parseInt(room, 10); return !isNaN(numRoom) ? String(numRoom).padStart(2, '0') : String(room).toUpperCase(); };
+    const formatLocalDateTime = (date) => { const year = date.getFullYear(); const month = (date.getMonth() + 1).toString().padStart(2, '0'); const day = date.getDate().toString().padStart(2, '0'); const hours = date.getHours().toString().padStart(2, '0'); const minutes = date.getMinutes().toString().padStart(2, '0'); return `${year}-${month}-${day}T${hours}:${minutes}`; };
+    const formatDisplayTime = (dateTimeString) => { if (!dateTimeString) return '-'; const date = new Date(dateTimeString); return date.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }); };
+    const getNumericClass = (classString) => String(classString || '').match(/^(\d+)/)?.[1] || null;
+    const getDbForClass = (classIdentifier) => { const numericClass = getNumericClass(classIdentifier); if (rombelToDbMap[classIdentifier]) { return dbInstances[rombelToDbMap[classIdentifier]]; } if (gradeToDbGroupMap[numericClass]) { return gradeToDbGroupMap[numericClass].map(dbName => dbInstances[dbName]); } console.error(`Instance database tidak ditemukan untuk identifier: ${classIdentifier}`); return null; };
+    const escapeHtmlAttributeForJsString = (s) => String(s).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const convertToPreviewLink = (url) => { if (!url || typeof url !== 'string') return url; return url.replace(/\/view(\?.*)?$/, '/preview'); };
+    const showNotification = (message) => { const n = document.getElementById('notification'); n.innerText = message; n.style.display = 'block'; setTimeout(() => { n.style.display = 'none'; }, 3000); };
+    
+    function initializeAppState() {
+        loginSection.style.display = 'none';
+        sidebar.style.display = 'flex';
+        dashboardContent.style.display = 'flex';
+        document.body.style.display = 'flex';
+        document.body.style.flexDirection = 'row'; 
+        document.body.style.alignItems = 'flex-start';
+        document.body.style.justifyContent = 'flex-start';
+
+        loadTokens();
+        loadStudents();
+        loadTokenAccessStatus();
+        loadSubmittedExamsStatus();
+        loadSetlokasiSettings();
+        loadStudentAnswers();
+        loadLockSettings();
+        showSection('dashboardSection');
+        resetInactivityTimer();
+        collapseSidebar();
+    }
+    
+    window.login = () => {
+        const u = document.getElementById("username").value.trim();
+        const p = document.getElementById("password").value.trim();
+        if (u === ADMIN_USER && p === ADMIN_PASS) {
+            localStorage.setItem('isAdminLoggedIn', 'true');
+            initializeAppState();
+        } else {
+            document.getElementById("loginError").innerText = "Username atau password salah.";
+        }
+    };
+
+    function attachEventListeners() {
+        document.getElementById('tokenSearchSubject').addEventListener('keyup', renderTokenTable);
+        document.getElementById('scoreSearchName').addEventListener('keyup', () => window.renderScoreTable(1));
+        document.getElementById('scoreSearchClass').addEventListener('keyup', () => window.renderScoreTable(1));
+        document.getElementById('studentSearchId').addEventListener('keyup', () => window.renderStudentTable(1));
+        document.getElementById('studentSearchName').addEventListener('keyup', () => window.renderStudentTable(1));
+        document.getElementById('studentSearchClass').addEventListener('keyup', () => window.renderStudentTable(1));
+        document.getElementById('examStatusFilter').addEventListener('change', () => window.renderStudentTable(1));
+        document.getElementById('addTokenForm').addEventListener('submit', handleAddToken);
+        document.getElementById('modalForm').addEventListener('submit', handleEditToken);
+        document.getElementById('addStudentForm').addEventListener('submit', handleAddStudent);
+        document.getElementById('addAnswerKey').addEventListener('input', () => updateAnswerKeyCount(document.getElementById('addAnswerKey'), document.getElementById('addAnswerKeyCount')));
+        document.getElementById('editAnswerKey').addEventListener('input', () => updateAnswerKeyCount(document.getElementById('editAnswerKey'), document.getElementById('editAnswerKeyCount')));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (localStorage.getItem('isAdminLoggedIn') === 'true') {
+          initializeAppState();
+      } else {
+          loginSection.style.display = 'block';
+          sidebar.style.display = 'none';
+          dashboardContent.style.display = 'none';
+          document.body.style.display = 'flex';
+          document.body.style.flexDirection = 'column';
+          document.body.style.alignItems = 'center';
+          document.body.style.justifyContent = 'center';
+      }
+      attachEventListeners();
+    });
+
+    window.expandSidebar = () => { sidebar.classList.add('expanded'); isSidebarExpanded = true; };
+    window.collapseSidebar = () => { sidebar.classList.remove('expanded'); isSidebarExpanded = false; };
+    
+    window.showSection = (sectionId) => {
+        document.querySelectorAll('.dashboard-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        document.getElementById(sectionId).style.display = 'block';
+
+        document.querySelectorAll('.sidebar-nav button').forEach(button => button.classList.remove('active'));
+        const activeBtn = document.querySelector(`.sidebar-nav button[data-section-id="${sectionId}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
+        
+        if (sectionId === 'dashboardSection') {
+            updateDashboard();
+        } else if (sectionId === 'tokenSection') {
+             renderTokenTable();
+        } else if (sectionId === 'rulesSection') {
+             updateSetlokasiStatusDisplay(); renderLockSettingsTable(); 
+        } else if (sectionId === 'studentSection') { 
+            studentOverallStatusFilter.value = 'ALL'; 
+            window.renderStudentTable(1); 
+        } else if (sectionId === 'scoreSection') {
+            window.currentScoreGradeFilter = 'ALL';
+            resetScoreTable();
+        } else if (sectionId === 'backupRestoreSection') {
+            // No specific render function needed for this section yet,
+            // as its content is mostly static buttons.
+        }
+    };
+
+    window.handleMenuClick = (buttonElement) => {
+        const sectionId = buttonElement.dataset.sectionId;
+        const action = buttonElement.dataset.action;
+        const performAction = () => {
+            if (action === 'promptLogout') window.promptLogout();
+            else window.showSection(sectionId);
+        };
+        if (!isSidebarExpanded) {
+            expandSidebar();
+            setTimeout(performAction, 100);
+        } else {
+            const currentActiveSectionId = document.querySelector('.dashboard-section[style*="display: block"]')?.id;
+            if (action === 'promptLogout' || sectionId !== currentActiveSectionId) {
+                performAction();
+            }
+        }
+    };
+    
+    document.addEventListener('click', (event) => {
+        const isClickInsideSidebar = sidebar.contains(event.target);
+        const isClickInsideModal = event.target.closest('.modal');
+        if (isSidebarExpanded && !isClickInsideSidebar && !isClickInsideModal) {
+            collapseSidebar();
+        }
+    });
+
+    function renderTokenTable() {
+        tokenTableBody.innerHTML = '';
+        consolidatedTokensMap.clear();
+        tokenCache.forEach(tokenData => {
+            const consolidatedKey = `${tokenData.token}_${tokenData.kelas}`;
+            if (!consolidatedTokensMap.has(consolidatedKey)) {
+                consolidatedTokensMap.set(consolidatedKey, { ...tokenData, firebaseKeys: new Set([tokenData.key]), firebaseGroups: new Set([tokenData.firebaseGroup]) });
+            } else {
+                const existing = consolidatedTokensMap.get(consolidatedKey);
+                existing.firebaseKeys.add(tokenData.key);
+                existing.firebaseGroups.add(tokenData.firebaseGroup);
+                existing.isForceActive = existing.isForceActive || tokenData.isForceActive;
+                existing.isActive = existing.isActive || tokenData.isActive;
+            }
+        });
+        let consolidatedTokens = Array.from(consolidatedTokensMap.values());
+        const searchSubject = document.getElementById('tokenSearchSubject').value.trim().toUpperCase();
+        if (searchSubject) {
+            consolidatedTokens = consolidatedTokens.filter(token => token.subject.toUpperCase().includes(searchSubject));
+        }
+        consolidatedTokens.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime() || String(a.kelas || '').localeCompare(String(b.kelas || '')));
+        consolidatedTokens.forEach((data, index) => {
+            const row = document.createElement('tr');
+            const studentsInClass = studentCache.filter(s => getNumericClass(s.class) === getNumericClass(data.kelas));
+            let sudahSubmitCount = 0;
+            let sudahAksesCount = 0;
+            studentsInClass.forEach(student => {
+                let hasAccessed = false;
+                for (const fbKey of data.firebaseKeys) {
+                    if (tokenAccessStatus[fbKey]?.[student.id]) hasAccessed = true;
+                    if (submittedExamsCache[fbKey]?.[student.id]?.isSubmitted) {
+                        sudahSubmitCount++;
+                        break; 
+                    }
+                }
+                if (hasAccessed) sudahAksesCount++;
+            });
+            const belumLoginCount = studentsInClass.length - sudahAksesCount;
+            const progresHtml = `<div style="text-align: left; line-height: 1.5; font-size: 13px;">Status Submit: <b>${sudahSubmitCount}/${sudahAksesCount}</b><br>Belum Login: <b>${belumLoginCount}</b></div>`;
+            const startTimeFormatted = formatDisplayTime(data.startTime);
+            const endTimeFormatted = formatDisplayTime(data.endTime);
+            const durationDisplay = data.durationMinutes ? `${data.durationMinutes} menit` : '-';
+            const isCurrentlyActive = data.isForceActive || data.isActive;
+            const statusClass = isCurrentlyActive ? 'on' : 'off';
+            const statusText = isCurrentlyActive ? 'ON' : 'OFF';
+            const tokenDisplayHtml = `${data.token} <span class="token-status ${statusClass}" onclick="promptToggleForceActive('${escapeHtmlAttributeForJsString(data.token)}', '${escapeHtmlAttributeForJsString(data.kelas)}', ${isCurrentlyActive})">(${statusText})</span>`;
+            row.innerHTML = `<td>${index + 1}</td><td class="mapel-cell"><div class="subject-display">${escapeHtmlAttributeForJsString(data.subject)}</div><a href="${escapeHtmlAttributeForJsString(data.googleDriveUrl)}" target="_blank" class="login-link link-display">Link Soal</a></td><td>${escapeHtmlAttributeForJsString(data.kelas)}</td><td>${tokenDisplayHtml}</td><td class="time-cell">${startTimeFormatted}</td><td class="time-cell">${endTimeFormatted}</td><td class="duration-cell">${durationDisplay}</td><td>${progresHtml}</td><td><div class="action-buttons-group"><button class="icon-button edit" onclick="editTokenConsolidated('${escapeHtmlAttributeForJsString(data.token)}', '${escapeHtmlAttributeForJsString(data.kelas)}')" title="Edit Token"><i class="fas fa-edit"></i></button><button class="icon-button delete" onclick="promptDeleteConsolidated('${escapeHtmlAttributeForJsString(data.token)}', '${escapeHtmlAttributeForJsString(data.kelas)}')" title="Hapus Token"><i class="fas fa-trash-alt"></i></button></div></td>`;
+            tokenTableBody.appendChild(row);
+        });
+        populateExamStatusFilter();
+    }
+    
+    window.promptToggleForceActive = (token, kelas, isCurrentlyActive) => {
+        const consolidatedToken = Array.from(consolidatedTokensMap.values()).find(t => t.token === token && t.kelas === kelas);
+        if (!consolidatedToken) return;
+        currentConsolidatedTokenInfo = consolidatedToken;
+        if (isCurrentlyActive) {
+            document.getElementById('forceInactiveModal').style.display = 'flex';
+        } else {
+            document.getElementById('forceActivePassword').value = '';
+            document.getElementById('forceActivePasswordError').innerText = '';
+            document.getElementById('forceActiveModal').style.display = 'flex';
+        }
+    };
+    
+    window.confirmForceActive = async () => {
+        if (document.getElementById('forceActivePassword').value !== ADMIN_PASS) {
+            return document.getElementById('forceActivePasswordError').innerText = "Password Admin salah.";
+        }
+        if (!currentConsolidatedTokenInfo) return;
+        const updates = {};
+        currentConsolidatedTokenInfo.firebaseKeys.forEach(fbKey => {
+            updates[fbKey] = { isForceActive: true, isActive: true };
+        });
+        loadingOverlay.style.display = 'flex';
+        try {
+            const updatePromises = Object.entries(updates).map(([key, value]) => {
+                const token = tokenCache.find(t => t.key === key);
+                if (token && dbInstances[token.firebaseGroup]) {
+                    return update(ref(dbInstances[token.firebaseGroup], `tokens/${key}`), value);
+                }
+            });
+            await Promise.all(updatePromises);
+            showNotification('Token berhasil diaktifkan secara paksa.');
+        } catch(e) {
+            showNotification('Gagal mengaktifkan token: ' + e.message);
+        } finally {
+            loadingOverlay.style.display = 'none';
+            closeForceActiveModal();
+            currentConsolidatedTokenInfo = null;
+        }
+    };
+
+    window.confirmForceInactive = async () => {
+        if (!currentConsolidatedTokenInfo) return;
+        const updates = {};
+        currentConsolidatedTokenInfo.firebaseKeys.forEach(fbKey => {
+            updates[fbKey] = { isForceActive: false };
+        });
+        loadingOverlay.style.display = 'flex';
+        try {
+            const updatePromises = Object.entries(updates).map(([key, value]) => {
+                const token = tokenCache.find(t => t.key === key);
+                if (token && dbInstances[token.firebaseGroup]) {
+                    return update(ref(dbInstances[token.firebaseGroup], `tokens/${key}`), value);
+                }
+            });
+            await Promise.all(updatePromises);
+            showNotification('Mode paksa dinonaktifkan. Status kembali ke jadwal.');
+            periksaAndUpdateStatusToken();
+        } catch(e) {
+            showNotification('Gagal menonaktifkan token: ' + e.message);
+        } finally {
+            loadingOverlay.style.display = 'none';
+            closeForceInactiveModal();
+            currentConsolidatedTokenInfo = null;
+        }
+    };
+
+    function loadTokens() {
+      tokenCache = [];
+      Object.keys(gradeToDbGroupMap).forEach(gradeNum => {
+          const dbNames = gradeToDbGroupMap[gradeNum];
+          dbNames.forEach(dbName => {
+              const dbInstance = dbInstances[dbName];
+              if (dbInstance) {
+                  onValue(ref(dbInstance, 'tokens'), (snapshot) => {
+                      const groupTokens = [];
+                      snapshot.forEach(child => {
+                          const data = child.val();
+                          data.key = child.key;
+                          data.firebaseGrade = gradeNum;
+                          data.firebaseGroup = dbName;
+                          if (data.createdAt && (Date.now() - data.createdAt) > THIRTY_DAYS_IN_MS) {
+                              remove(ref(dbInstance, 'tokens/' + data.key));
+                              return;
+                          }
+                          groupTokens.push(data);
+                      });
+                      tokenCache = tokenCache.filter(t => t.firebaseGroup !== dbName).concat(groupTokens);
+                      updateDashboard();
+                      renderTokenTable();
+                      periksaAndUpdateStatusToken();
+                  }, (error) => console.error(`Error memuat token dari grup ${dbName}:`, error));
+              }
+          });
+      });
+    }
+    
+    async function handleAddToken(e) {
+      e.preventDefault();
+      const s = document.getElementById('addSubject').value.trim().toUpperCase();
+      const k = document.getElementById('addKelas').value.trim();
+      const t = document.getElementById('addToken').value.trim().toUpperCase();
+      const originalGoogleDriveUrl = document.getElementById('addGoogleDriveUrl').value.trim();
+      const googleDriveUrlPreview = convertToPreviewLink(originalGoogleDriveUrl);
+      const answerKey = document.getElementById('addAnswerKey').value.trim().toUpperCase();
+      const startTimeInput = document.getElementById('addStartTime').value;
+      const endTimeInput = document.getElementById('addEndTime').value;
+      const em = document.getElementById('addErrorMsg');
+      em.innerText = "";
+      document.getElementById('addGoogleDriveUrlError').innerText = "";
+      document.getElementById('addAnswerKeyError').innerText = "";
+      if (!['7', '8', '9'].includes(k)) return em.innerText = "Kelas harus berupa 7, 8, atau 9.";
+      const targetDbs = getDbForClass(k);
+      if (!targetDbs || !Array.isArray(targetDbs) || targetDbs.length === 0) return em.innerText = "Kelas tidak valid atau konfigurasi Firebase belum lengkap.";
+      if (!s || !k || !t || !originalGoogleDriveUrl || !answerKey || !startTimeInput || !endTimeInput) return em.innerText = "Semua field harus diisi!";
+      const originalStartTime = new Date(startTimeInput);
+      const originalEndTime = new Date(endTimeInput);
+      if (originalStartTime >= originalEndTime) return em.innerText = "Waktu token dibuka harus sebelum waktu token ditutup!";
+      if (!/^[A-D](,[A-D])*$/.test(answerKey) && answerKey) return document.getElementById('addAnswerKeyError').innerText = "Format kunci jawaban tidak valid.";
+      if (!originalGoogleDriveUrl.startsWith('http')) return document.getElementById('addGoogleDriveUrlError').innerText = "URL Google Drive tidak valid.";
+      if (tokenCache.some(item => item.token === t && getNumericClass(item.kelas) === getNumericClass(k))) return em.innerText = "Token (Base Token) sudah ada untuk kelas ini!";
+      loadingOverlay.style.display = 'flex';
+      const adjustedStartTime = new Date(originalStartTime.getTime() + 30000); 
+      const durationMinutes = Math.round((originalEndTime.getTime() - adjustedStartTime.getTime()) / 60000);
+      const data = { subject: s, kelas: k, token: t, googleDriveUrl: googleDriveUrlPreview, originalGoogleDriveUrl, answerKey, startTime: formatLocalDateTime(adjustedStartTime), endTime: endTimeInput, durationMinutes, createdAt: Date.now(), isActive: false, isForceActive: false };
+      try {
+          await Promise.all(targetDbs.map(db => push(ref(db, 'tokens'), data)));
+          showNotification('Token berhasil ditambahkan!');
+          closeAddTokenModal();
+      } catch (err) {
+          em.innerText = "Gagal menyimpan token: " + err.message;
+      } finally {
+          loadingOverlay.style.display = 'none';
+      }
+    }
+    
+    window.editTokenConsolidated = (baseToken, kelas) => {
+        const consolidatedToken = Array.from(consolidatedTokensMap.values()).find(t => t.token === baseToken && t.kelas === kelas);
+        if (!consolidatedToken) return;
+        currentConsolidatedTokenInfo = consolidatedToken;
+        document.getElementById('editSubject').value = consolidatedToken.subject;
+        document.getElementById('editKelas').value = consolidatedToken.kelas;
+        document.getElementById('editToken').value = consolidatedToken.token;
+        document.getElementById('editGoogleDriveUrl').value = consolidatedToken.originalGoogleDriveUrl || consolidatedToken.googleDriveUrl || '';
+        document.getElementById('editAnswerKey').value = consolidatedToken.answerKey || '';
+        updateAnswerKeyCount(document.getElementById('editAnswerKey'), document.getElementById('editAnswerKeyCount'));
+        document.getElementById('editStartTime').value = consolidatedToken.startTime;
+        document.getElementById('editEndTime').value = consolidatedToken.endTime;
+        document.getElementById('editErrorMsg').innerText = "";
+        document.getElementById('editGoogleDriveUrlError').innerText = "";
+        document.getElementById('editAnswerKeyError').innerText = "";
+        document.getElementById('editModal').style.display = 'flex';
+    };
+
+    async function handleEditToken(e) {
+      e.preventDefault();
+      const s = document.getElementById('editSubject').value.trim().toUpperCase();
+      const newKelas = document.getElementById('editKelas').value.trim();
+      const t = document.getElementById('editToken').value.trim().toUpperCase();
+      const originalGoogleDriveUrl = document.getElementById('editGoogleDriveUrl').value.trim();
+      const googleDriveUrlPreview = convertToPreviewLink(originalGoogleDriveUrl);
+      const answerKey = document.getElementById('editAnswerKey').value.trim().toUpperCase();
+      const startTimeInput = document.getElementById('editStartTime').value;
+      const endTimeInput = document.getElementById('editEndTime').value;
+      const em = document.getElementById('editErrorMsg');
+      em.innerText = ""; document.getElementById('editGoogleDriveUrlError').innerText = ""; document.getElementById('editAnswerKeyError').innerText = "";
+      if (!['7', '8', '9'].includes(newKelas)) return em.innerText = "Kelas harus berupa 7, 8, atau 9.";
+      if (!currentConsolidatedTokenInfo) return em.innerText = "Error: Informasi token tidak ditemukan.";
+      const oldKelas = currentConsolidatedTokenInfo.kelas;
+      const oldBaseToken = currentConsolidatedTokenInfo.token;
+      const oldFirebaseKeys = Array.from(currentConsolidatedTokenInfo.firebaseKeys);
+      if (!s || !newKelas || !t || !originalGoogleDriveUrl || !answerKey || !startTimeInput || !endTimeInput) return em.innerText = "Semua field harus diisi!";
+      const originalStartTime = new Date(startTimeInput);
+      const originalEndTime = new Date(endTimeInput);
+      if (originalStartTime >= originalEndTime) return em.innerText = "Waktu token dibuka harus sebelum waktu token ditutup!";
+      if (!/^[A-D](,[A-D])*$/.test(answerKey) && answerKey) return document.getElementById('editAnswerKeyError').innerText = "Format kunci jawaban tidak valid.";
+      if (!originalGoogleDriveUrl.startsWith('http')) return document.getElementById('editGoogleDriveUrlError').innerText = "URL Google Drive tidak valid.";
+      if (Array.from(consolidatedTokensMap.values()).some(item => item.token === t && item.kelas === newKelas && !(item.token === oldBaseToken && item.kelas === oldKelas))) return em.innerText = "Token (Base Token) sudah ada untuk kelas ini!";
+      loadingOverlay.style.display = 'flex';
+      const adjustedStartTime = new Date(originalStartTime.getTime() + 30000);
+      const durationMinutes = Math.round((originalEndTime.getTime() - adjustedStartTime.getTime()) / 60000);
+      const updatedStudentData = { subject: s, kelas: newKelas, token: t, googleDriveUrl: googleDriveUrlPreview, originalGoogleDriveUrl, answerKey, startTime: formatLocalDateTime(adjustedStartTime), endTime: endTimeInput, durationMinutes, createdAt: currentConsolidatedTokenInfo.createdAt, isForceActive: currentConsolidatedTokenInfo.isForceActive, isActive: currentConsolidatedTokenInfo.isActive };
+      try {
+          if (getNumericClass(oldKelas) !== getNumericClass(newKelas) || oldBaseToken !== t) {
+              const deletePromises = oldFirebaseKeys.flatMap(fbKey => {
+                  const token = tokenCache.find(tok => tok.key === fbKey);
+                  const db = token ? dbInstances[token.firebaseGroup] : null;
+                  return db ? [remove(ref(db, `tokens/${fbKey}`)), remove(ref(db, `exam_access_status/${fbKey}`)), remove(ref(db, `submitted_exams/${fbKey}`)), remove(ref(db, `student_answers/${fbKey}`))] : [];
+              });
+              await Promise.all(deletePromises);
+              const newTargetDbs = getDbForClass(newKelas);
+              await Promise.all(newTargetDbs.map(db => push(ref(db, 'tokens'), updatedStudentData)));
+              showNotification(`Token berhasil dipindahkan ke kelas ${newKelas}!`);
+          } else {
+              const dbToUpdate = dbInstances[currentConsolidatedTokenInfo.firebaseGroups.values().next().value]; // Use one of the existing groups
+              if (dbToUpdate) {
+                await update(ref(dbToUpdate, 'tokens/' + oldFirebaseKeys[0]), updatedStudentData);
+              } else {
+                throw new Error("Could not find Firebase DB instance for update.");
+              }
+              showNotification('Token berhasil diedit!');
+          }
+          closeEditModal();
+      } catch (err) {
+          em.innerText = "Gagal menyimpan perubahan: " + err.message;
+      } finally {
+          loadingOverlay.style.display = 'none';
+          currentConsolidatedTokenInfo = null;
+        }
+    }
+
+    window.promptDeleteConsolidated = (baseToken, kelas) => {
+        const consolidatedToken = Array.from(consolidatedTokensMap.values()).find(t => t.token === baseToken && t.kelas === kelas);
+        if (!consolidatedToken) return;
+        currentConsolidatedTokenInfo = consolidatedToken;
+        document.getElementById('deleteModal').style.display = 'flex';
+    };
+
+    window.confirmDelete = async () => {
+        if (!currentConsolidatedTokenInfo) return;
+        loadingOverlay.style.display = 'flex';
+        try {
+            const deletePromises = Array.from(currentConsolidatedTokenInfo.firebaseKeys).flatMap(fbKey => {
+                const token = tokenCache.find(tok => tok.key === fbKey);
+                const db = token ? dbInstances[token.firebaseGroup] : null;
+                return db ? [remove(ref(db, `tokens/${fbKey}`)), remove(ref(db, `exam_access_status/${fbKey}`)), remove(ref(db, `submitted_exams/${fbKey}`)), remove(ref(db, `student_answers/${fbKey}`))] : [];
+            });
+            await Promise.all(deletePromises);
+            showNotification('Token berhasil dihapus!');
+        } catch (err) {
+            showNotification("Gagal menghapus token: " + err.message);
+        } finally {
+            loadingOverlay.style.display = 'none';
+            closeDeleteModal();
+            currentConsolidatedTokenInfo = null;
+        }
+    };
+    
+    function loadStudents() {
+        studentCache = [];
+        Object.keys(dbInstances).forEach(dbName => {
+            const dbInstance = dbInstances[dbName];
+            if (dbInstance) {
+                onValue(ref(dbInstance, 'students'), (snapshot) => {
+                    const groupStudents = [];
+                    snapshot.forEach(child => {
+                        const data = child.val(); data.key = child.key; data.firebaseGroup = dbName; groupStudents.push(data);
+                    });
+                    studentCache = studentCache.filter(s => s.firebaseGroup !== dbName).concat(groupStudents);
+                    studentCache.sort((a, b) => {
+                        const classA = String(a.class || '');
+                        const classB = String(b.class || '');
+                        const classCompare = classA.localeCompare(classB);
+                        if (classCompare !== 0) return classCompare;
+
+                        const nameA = String(a.name || '').toUpperCase();
+                        const nameB = String(b.name || '').toUpperCase();
+                        return nameA.localeCompare(nameB);
+                    });
+                    window.renderStudentTable(currentPageStudent);
+                    resetScoreTable();
+                }, (error) => console.error(`Error memuat siswa dari grup ${dbName}:`, error));
+            }
+        });
+    }
+    
+    window.renderStudentTable = (page = 1) => {
+        currentPageStudent = page;
+        studentTableBody.innerHTML = '';
+        let studentsToDisplay = [...studentCache]; 
+
+        const examStatusFilterTokenKey = document.getElementById('examStatusFilter').value;
+        const studentOverallStatusFilterValue = document.getElementById('studentOverallStatusFilter').value;
+        
+        const studentStatuses = new Map();
+
+        studentsToDisplay.forEach(student => {
+            const studentNumericClass = getNumericClass(student.class);
+            const applicableTokensForStudentClass = tokenCache.filter(token => getNumericClass(token.kelas) === studentNumericClass);
+
+            let relevantTokensInFilterContext; 
+            if (examStatusFilterTokenKey) {
+                const selectedToken = applicableTokensForStudentClass.find(token => token.key === examStatusFilterTokenKey);
+                relevantTokensInFilterContext = selectedToken ? [selectedToken] : [];
+            } else {
+                relevantTokensInFilterContext = applicableTokensForStudentClass;
+            }
+            
+            let hasSubmittedAny = false;
+            let isLoggedInCurrently = false;
+            let hasAccessedBefore = false;
+            let applicableTokensExist = relevantTokensInFilterContext.length > 0;
+
+            for (const token of relevantTokensInFilterContext) {
+                const accessData = tokenAccessStatus[token.key]?.[student.id];
+                const submissionData = submittedExamsCache[token.key]?.[student.id];
+
+                if (submissionData?.isSubmitted) {
+                    hasSubmittedAny = true;
+                    break;
+                }
+                if (accessData?.isLoggedIn) {
+                    isLoggedInCurrently = true;
+                }
+                if (accessData?.accessCount > 0) {
+                    hasAccessedBefore = true;
+                }
+            }
+
+            let status = '(-)'; 
+
+            if (hasSubmittedAny) {
+                status = 'Sudah submit';
+            } else if (isLoggedInCurrently) {
+                status = 'Sedang mengerjakan';
+            } else if (hasAccessedBefore) {
+                status = 'Belum Login (reset)';
+            } else if (applicableTokensExist) {
+                status = 'Belum Login';
+            }
+
+            studentStatuses.set(student.key, status);
+        });
+
+        const searchId = document.getElementById('studentSearchId').value.trim();
+        if (searchId) studentsToDisplay = studentsToDisplay.filter(student => student.id.includes(searchId));
+
+        const searchName = document.getElementById('studentSearchName').value.trim().toUpperCase();
+        if (searchName) studentsToDisplay = studentsToDisplay.filter(student => student.name.toUpperCase().includes(searchName));
+        
+        const searchClass = document.getElementById('studentSearchClass').value.trim().toUpperCase();
+        if (searchClass) studentsToDisplay = studentsToDisplay.filter(student => student.class.toUpperCase().includes(searchClass));
+        
+        if (studentOverallStatusFilterValue !== "ALL") {
+            studentsToDisplay = studentsToDisplay.filter(student => studentStatuses.get(student.key) === studentOverallStatusFilterValue);
+        }
+        
+        filteredStudents = studentsToDisplay;
+        const totalPages = Math.ceil(filteredStudents.length / selectedItemsPerPage);
+        const startIndex = (currentPageStudent - 1) * selectedItemsPerPage;
+        const endIndex = startIndex + selectedItemsPerPage;
+        const studentsForPage = filteredStudents.slice(startIndex, endIndex);
+
+        studentTableBody.innerHTML = '';
+        studentsForPage.forEach((student, index) => {
+            const row = document.createElement('tr');
+            const finalStatus = studentStatuses.get(student.key) || '(-)';
+            let statusColor = 'black';
+            switch(finalStatus) {
+                case 'Sudah submit': statusColor = '#27ae60'; break;
+                case 'Sedang mengerjakan': statusColor = '#f39c12'; break;
+                case 'Belum Login (reset)': statusColor = '#8e44ad'; break;
+                case 'Belum Login': statusColor = '#e74c3c'; break;
+                case '(-)': statusColor = '#7f8c8d'; break;
+            }
+
+            row.innerHTML = `
+                <td>${startIndex + index + 1}</td><td>${escapeHtmlAttributeForJsString(student.id)}</td><td>${escapeHtmlAttributeForJsString(student.name)}</td><td>${escapeHtmlAttributeForJsString(student.class)}</td><td>${padRoomNumber(student.room)}</td>
+                <td style="color: ${statusColor}; font-weight: bold;">${finalStatus}</td>
+                <td><div class="action-buttons-group">
+                    <button class="icon-button edit" onclick="openEditStudentModal('${escapeHtmlAttributeForJsString(student.key)}')" title="Edit Data Siswa"><i class="fas fa-edit"></i></button>
+                    <button class="icon-button delete" onclick="openDeleteStudentConfirmModal('${escapeHtmlAttributeForJsString(student.key)}')" title="Hapus Siswa"><i class="fas fa-trash-alt"></i></button>
+                    <button class="icon-button reset" onclick="promptResetStudent('${escapeHtmlAttributeForJsString(student.key)}', '${escapeHtmlAttributeForJsString(student.id)}', '${escapeHtmlAttributeForJsString(student.name)}', '${escapeHtmlAttributeForJsString(student.class)}')" title="Reset Status Login"><i class="fas fa-redo"></i></button>
+                    <button class="icon-button submit" onclick="promptSubmitAnswer('${escapeHtmlAttributeForJsString(student.key)}', '${escapeHtmlAttributeForJsString(student.id)}', '${escapeHtmlAttributeForJsString(student.name)}', '${escapeHtmlAttributeForJsString(student.class)}')" title="Kirim Jawaban Manual"><i class="fas fa-paper-plane"></i></button>
+                    <button class="icon-button erase" onclick="promptDeleteAnswer('${escapeHtmlAttributeForJsString(student.key)}', '${escapeHtmlAttributeForJsString(student.id)}', '${escapeHtmlAttributeForJsString(student.name)}', '${escapeHtmlAttributeForJsString(student.class)}')" title="Hapus Semua Jawaban"><i class="fas fa-eraser"></i></button>
+                </div></td>`;
+            studentTableBody.appendChild(row);
+        });
+        renderPaginationControls(studentPaginationDiv, currentPageStudent, totalPages, 'renderStudentTable');
+    };
+
+    function renderPaginationControls(container, currentPage, totalPages, renderFunction) {
+        container.innerHTML = '';
+        if (totalPages <= 1) return;
+        const prevButton = document.createElement('button');
+        prevButton.innerText = 'Sebelumnya';
+        prevButton.disabled = currentPage === 1;
+        prevButton.onclick = () => window[renderFunction](currentPage - 1);
+        container.appendChild(prevButton);
+        const pageSpan = document.createElement('span');
+        pageSpan.innerText = `Halaman ${currentPage} dari ${totalPages}`;
+        container.appendChild(pageSpan);
+        const nextButton = document.createElement('button');
+        nextButton.innerText = 'Berikutnya';
+        nextButton.disabled = currentPage === totalPages;
+        nextButton.onclick = () => window[renderFunction](currentPage + 1);
+        container.appendChild(nextButton);
+    }
+
+    window.updateItemsPerPage = (value) => {
+        selectedItemsPerPage = parseInt(value, 10);
+        window.renderStudentTable(1);
+        window.renderScoreTable(1);
+    };
+
+    async function handleAddStudent(e) {
+        e.preventDefault();
+        const studentId = padStudentId(document.getElementById('newStudentId').value.trim());
+        const studentName = document.getElementById('newStudentName').value.trim().toUpperCase().replace(/'/g, '');
+        const studentClass = document.getElementById('newStudentClass').value.trim().toUpperCase();
+        const studentRoom = padRoomNumber(document.getElementById('newStudentRoom').value.trim());
+        const studentErrorMsg = document.getElementById('addStudentErrorMsg');
+        studentErrorMsg.innerText = "";
+        
+        if (!VALID_ROMBELS.includes(studentClass)) return studentErrorMsg.innerText = "Kelas siswa tidak valid. Gunakan format seperti 7A, 8B, 9C, dll.";
+        const targetDb = getDbForClass(studentClass);
+        if (!targetDb || Array.isArray(targetDb)) return studentErrorMsg.innerText = "Konfigurasi Firebase belum lengkap untuk rombel ini.";
+        if (!/^\d{3,}$/.test(studentId)) return studentErrorMsg.innerText = "ID Siswa harus berupa angka!";
+        if (studentCache.some(s => s.id === studentId && s.firebaseGroup === rombelToDbMap[studentClass])) return studentErrorMsg.innerText = "ID Siswa sudah ada di kelas tersebut.";
+        
+        try {
+            await push(ref(targetDb, 'students'), { id: studentId, name: studentName, class: studentClass, room: studentRoom, isLoggedIn: false });
+            showNotification('Siswa berhasil ditambahkan.');
+            closeAddStudentModal();
+        } catch (error) {
+            studentErrorMsg.innerText = "Gagal menambahkan siswa: " + error.message;
+        }
+    }
+
+    window.openEditStudentModal = (key) => {
+        const student = studentCache.find(s => s.key === key);
+        if (!student) return;
+        currentStudentKey = key;
+        document.getElementById('modalStudentId').value = student.id;
+        document.getElementById('modalStudentName').value = student.name;
+        document.getElementById('modalStudentClass').value = student.class;
+        document.getElementById('modalStudentRoom').value = student.room || '';
+        document.getElementById('editStudentErrorMsg').innerText = "";
+        document.getElementById('editStudentModal').style.display = 'flex';
+    };
+
+    window.confirmEditStudent = async () => {
+        const studentId = padStudentId(document.getElementById('modalStudentId').value.trim());
+        const studentName = document.getElementById('modalStudentName').value.trim().toUpperCase().replace(/'/g, '');
+        const newStudentClass = document.getElementById('modalStudentClass').value.trim().toUpperCase();
+        const studentRoom = padRoomNumber(document.getElementById('modalStudentRoom').value.trim());
+        const editStudentErrorMsg = document.getElementById('editStudentErrorMsg');
+        editStudentErrorMsg.innerText = "";
+        if (!VALID_ROMBELS.includes(newStudentClass)) return editStudentErrorMsg.innerText = "Kelas siswa tidak valid.";
+        const originalStudentData = studentCache.find(s => s.key === currentStudentKey);
+        if (!originalStudentData) return editStudentErrorMsg.innerText = "Data siswa asli tidak ditemukan.";
+        const oldStudentClass = originalStudentData.class;
+        const oldDb = getDbForClass(oldStudentClass), newDb = getDbForClass(newStudentClass);
+        if (!oldDb || Array.isArray(oldDb) || !newDb || Array.isArray(newDb)) return editStudentErrorMsg.innerText = "Konfigurasi Firebase belum lengkap.";
+        if (!studentId || !studentName || !newStudentClass || !studentRoom) return editStudentErrorMsg.innerText = "Semua field harus diisi!";
+        if (!/^\d+$/.test(studentId)) return editStudentErrorMsg.innerText = "ID Siswa harus berupa angka!";
+        if (studentCache.some(s => s.id === studentId && s.key !== currentStudentKey && s.firebaseGroup === rombelToDbMap[newStudentClass])) return editStudentErrorMsg.innerText = "ID Siswa sudah ada.";
+        loadingOverlay.style.display = 'flex';
+        const updatedStudentData = { id: studentId, name: studentName, class: newStudentClass, room: studentRoom, isLoggedIn: originalStudentData.isLoggedIn || false };
+        try {
+            if (oldDb.app.name !== newDb.app.name) {
+                await remove(ref(oldDb, 'students/' + currentStudentKey));
+                await push(ref(newDb, 'students'), updatedStudentData);
+                showNotification(`Siswa berhasil dipindahkan ke kelas ${newStudentClass}!`);
+            } else {
+                await update(ref(newDb, 'students/' + currentStudentKey), updatedStudentData);
+                showNotification('Data siswa berhasil diperbarui.');
+            }
+            closeEditStudentModal();
+        } catch (error) {
+            editStudentErrorMsg.innerText = "Gagal memperbarui siswa: " + error.message;
+        } finally {
+            loadingOverlay.style.display = 'none';
+        }
+    };
+    
+    window.onclick = (event) => { if (event.target.classList.contains('modal')) event.target.style.display = 'none'; };
+    window.openAddTokenModal = () => { document.getElementById('addTokenForm').reset(); document.getElementById('addAnswerKeyCount').value = '0'; document.getElementById('addTokenModal').style.display = 'flex'; };
+    window.closeAddTokenModal = () => document.getElementById('addTokenModal').style.display = 'none';
+    window.openAddStudentModal = () => { document.getElementById('addStudentForm').reset(); document.getElementById('addStudentModal').style.display = 'flex'; };
+    window.closeAddStudentModal = () => document.getElementById('addStudentModal').style.display = 'none';
+    window.closeEditModal = () => document.getElementById('editModal').style.display = 'none';
+    window.closeDeleteModal = () => document.getElementById('deleteModal').style.display = 'none';
+    window.closeForceActiveModal = () => document.getElementById('forceActiveModal').style.display = 'none';
+    window.closeForceInactiveModal = () => document.getElementById('forceInactiveModal').style.display = 'none';
+    window.closeAccessDetailModal = () => document.getElementById('accessDetailModal').style.display = 'none';
+    window.closeEditStudentModal = () => { document.getElementById('editStudentModal').style.display = 'none'; currentStudentKey = null; };
+    window.closeDeleteStudentConfirmModal = () => { document.getElementById('deleteStudentConfirmModal').style.display = 'none'; deleteStudentKey = null; };
+    window.openImportStudentModal = () => { document.getElementById('importStudentModal').style.display = 'flex'; document.getElementById('csvFileInput').value = ''; document.getElementById('importFileError').innerText = 'Pilih file CSV.'; };
+    window.closeImportStudentModal = () => document.getElementById('importStudentModal').style.display = 'none';
+    window.closeImportResultModal = () => document.getElementById('importResultModal').style.display = 'none';
+    window.openEmptyStudentsModal = () => { document.getElementById('emptyStudentsModal').style.display = 'flex'; document.getElementById('emptyStudentsPassword').value = ''; document.getElementById('emptyStudentsPasswordError').innerText = ''; };
+    window.closeEmptyStudentsModal = () => document.getElementById('emptyStudentsModal').style.display = 'none';
+    window.promptLogout = () => document.getElementById('logoutConfirmModal').style.display = 'flex';
+    window.closeLogoutModal = () => document.getElementById('logoutConfirmModal').style.display = 'none';
+    window.confirmLogout = () => { localStorage.removeItem('isAdminLoggedIn'); location.reload(); };
+    window.closeResetStudentModal = () => { document.getElementById('resetStudentModal').style.display = 'none'; studentKeyForAction = null; };
+    window.closeSubmitAnswerModal = () => { document.getElementById('submitAnswerModal').style.display = 'none'; studentKeyForAction = null; };
+    window.closeDeleteAnswerModal = () => { document.getElementById('deleteAnswerModal').style.display = 'none'; studentKeyForAction = null; };
+    window.showPrintInfoModal = () => { document.getElementById('printInfoModal').style.display = 'flex'; };
+    window.closePrintInfoModal = () => { document.getElementById('printInfoModal').style.display = 'none'; };
+    window.openCopyPrintModal = (tableId, modalTitle) => { currentTableIdToCopy = tableId; document.getElementById('copyPrintModalTitle').innerText = modalTitle; document.getElementById('copyPrintModal').style.display = 'flex'; };
+    window.closeCopyPrintModal = () => { document.getElementById('copyPrintModal').style.display = 'none'; };
+    window.copyTableToClipboard = () => {
+        let textToCopy = '';
+        if (currentTableIdToCopy === 'tokenTable') {
+            const header = `NO\tMAPEL\tKELAS\tTOKEN\tDIBUKA\tDITUTUP\tDURASI\n`;
+            let body = '';
+            let consolidatedTokens = Array.from(consolidatedTokensMap.values());
+            const searchSubject = document.getElementById('tokenSearchSubject').value.trim().toUpperCase();
+            if (searchSubject) {
+                consolidatedTokens = consolidatedTokens.filter(token => token.subject.toUpperCase().includes(searchSubject));
+            }
+            consolidatedTokens.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime() || String(a.kelas || '').localeCompare(String(b.kelas || '')));
+            consolidatedTokens.forEach((data, index) => {
+                const startTimeFull = data.startTime ? new Date(data.startTime).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+                const endTimeFull = data.endTime ? new Date(data.endTime).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+                const durationFull = data.durationMinutes ? `${data.durationMinutes} menit` : '-';
+                body += `${index + 1}\t${data.subject}\t${data.kelas}\t${data.token}\t${startTimeFull}\t${endTimeFull}\t${durationFull}\n`;
+            });
+            textToCopy = header + body;
+        } else if (currentTableIdToCopy === 'scoreTable') {
+            let studentsForCopy = studentCache;
+            if (window.currentScoreGradeFilter !== 'ALL') {
+                studentsForCopy = studentCache.filter(s => getNumericClass(s.class) === window.currentScoreGradeFilter);
+            }
+            const scoreSearchName = document.getElementById('scoreSearchName').value.trim().toUpperCase();
+            if (scoreSearchName) studentsForCopy = studentsForCopy.filter(student => student.name.toUpperCase().includes(scoreSearchName));
+            const scoreSearchClass = document.getElementById('scoreSearchClass').value.trim().toUpperCase();
+            if (scoreSearchClass) studentsForCopy = studentsForCopy.filter(student => student.class.toUpperCase().includes(scoreSearchClass));
+
+            studentsForCopy.sort((a, b) => {
+                const classA = String(a.class || '');
+                const classB = String(b.class || '');
+                const classCompare = classA.localeCompare(classB);
+                if (classCompare !== 0) return classCompare;
+
+                const nameA = String(a.name || '').toUpperCase();
+                const nameB = String(b.name || '').toUpperCase();
+                return nameA.localeCompare(nameB);
+            });
+
+            const relevantTokens = tokenCache.filter(t => getNumericClass(t.kelas) === window.currentScoreGradeFilter);
+            const subjects = [...new Set(relevantTokens.map(t => t.subject))].sort();
+            let header = `NO\tNAMA SISWA\tKELAS`;
+            subjects.forEach(subject => header += `\t${generateAbbreviation(subject)}`);
+            header += `\n`;
+            let body = '';
+            studentsForCopy.forEach((student, index) => {
+                let rowData = `${index + 1}\t${student.name}\t${student.class}`;
+                subjects.forEach(subject => {
+                    let score = '-';
+                    const tokenInfo = Array.from(consolidatedTokensMap.values()).find(t => t.subject === subject && getNumericClass(t.kelas) === getNumericClass(student.class));
+                    if(tokenInfo){
+                        for(const fbKey of Array.from(tokenInfo.firebaseKeys)){
+                             const answerData = studentAnswersCache[fbKey] && studentAnswersCache[fbKey][student.id];
+                             if (answerData) {
+                                 score = calculateScore(answerData.answers, tokenInfo.answerKey);
+                                 break;
+                             }
+                        }
+                    }
+                    rowData += `\t${score}`;
+                });
+                body += rowData + '\n';
+            });
+            textToCopy = header + body;
+        } else {
+            const table = document.getElementById(currentTableIdToCopy);
+            if (!table) { showNotification('Tabel tidak ditemukan.'); return; }
+            const rows = table.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('th, td');
+                const rowText = Array.from(cells).map(cell => cell.innerText.trim()).join('\t');
+                textToCopy += rowText + '\n';
+            });
+        }
+        const tempTextArea = document.createElement('textarea');
+        tempTextArea.value = textToCopy;
+        document.body.appendChild(tempTextArea);
+        tempTextArea.select();
+        try {
+            document.execCommand('copy');
+            showNotification('Tabel berhasil disalin.');
+        } catch (err) {
+            showNotification('Gagal menyalin tabel.');
+        } finally {
+            document.body.removeChild(tempTextArea);
+            closeCopyPrintModal();
+        }
+    };
+
+    function updateTime() {
+      const now = new Date();
+      const options = { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+      const display = now.toLocaleString('id-ID', options).replace(/\./g, ':');
+      document.getElementById("currentTime").innerText = display;
+      const adminTimeEl = document.getElementById("adminDateTime");
+      if(adminTimeEl) adminTimeEl.innerText = display;
+    }
+    
+    function resetInactivityTimer() { clearTimeout(inactivityTimer); inactivityTimer = setTimeout(() => { if(localStorage.getItem('isAdminLoggedIn')) { showNotification('Anda telah logout karena tidak ada aktivitas.'); confirmLogout(); } }, INACTIVITY_TIMEOUT); }
+    function updateAnswerKeyCount(answerKeyInputElem, countInputElem) { const key = answerKeyInputElem.value.trim(); countInputElem.value = key === '' ? 0 : key.split(',').filter(v => v.trim() !== '').length; }
+    setInterval(updateTime, 1000);
+    updateTime();
+    ['mousemove', 'keypress', 'scroll', 'click'].forEach(evt => window.addEventListener(evt, resetInactivityTimer));
+    setInterval(() => { if (localStorage.getItem('isAdminLoggedIn')) periksaAndUpdateStatusToken(); }, 10000);
+    
+    window.openDeleteStudentConfirmModal = (key) => { deleteStudentKey = key; document.getElementById('deleteStudentConfirmModal').style.display = 'flex'; };
+    window.confirmDeleteStudent = async () => {
+        if (!deleteStudentKey) return;
+        const studentToDelete = studentCache.find(s => s.key === deleteStudentKey);
+        if (!studentToDelete) return showNotification("Siswa tidak ditemukan.");
+        const targetDb = getDbForClass(studentToDelete.class);
+        if (!targetDb || Array.isArray(targetDb)) return showNotification("Gagal menghapus: Database tidak ditemukan.");
+        loadingOverlay.style.display = 'flex';
+        try {
+            await remove(ref(targetDb, 'students/' + deleteStudentKey));
+            showNotification('Siswa berhasil dihapus.');
+        } catch (error) {
+            showNotification("Gagal menghapus siswa: " + error.message);
+        } finally {
+            loadingOverlay.style.display = 'none';
+            closeDeleteStudentConfirmModal();
+        }
+    };
+
+    function showImportResult(importedCount, skippedCount, details) {
+        document.getElementById('importResultSummary').innerHTML = `Berhasil: <b style="color:green;">${importedCount}</b>, Gagal: <b style="color:red;">${skippedCount}</b>`;
+        const detailsList = document.getElementById('importResultDetails');
+        detailsList.innerHTML = '';
+        if (details.length > 0) {
+            details.forEach(d => {
+                const li = document.createElement('li');
+                li.style.color = 'red';
+                li.innerText = d;
+                detailsList.appendChild(li);
+            });
+        } else {
+            const li = document.createElement('li');
+            li.innerText = "Tidak ada detail kesalahan.";
+            detailsList.appendChild(li);
+        }
+        document.getElementById('importResultModal').style.display = 'flex';
+    }
+
+    window.processCsvFile = async () => {
+        if (isImporting) return showNotification('Proses impor sedang berjalan.');
+        const file = document.getElementById('csvFileInput').files[0];
+        const importFileError = document.getElementById('importFileError');
+        importFileError.innerText = '';
+        if (!file) {
+            importFileError.innerText = 'Pilih file CSV.';
+            return;
+        }
+        if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+            importFileError.innerText = 'File harus berformat CSV.';
+            return;
+        }
+        isImporting = true;
+        loadingOverlay.style.display = 'flex';
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const text = e.target.result;
+            const lines = text.split('\n').filter(line => line.trim() !== '');
+            let importedCount = 0, skippedCount = 0, errorDetails = [];
+            const batchUpdateMap = {};
+            Object.keys(dbInstances).forEach(name => batchUpdateMap[name] = {});
+            if (lines.length <= 1) {
+                showImportResult(0, 0, ["File CSV kosong atau hanya berisi header."]);
+                isImporting = false;
+                loadingOverlay.style.display = 'none';
+                closeImportStudentModal();
+                return;
+            }
+            for (let i = 1; i < lines.length; i++) {
+                let parts = lines[i].split(',');
+                if (parts.length !== 4) parts = lines[i].split(';');
+                parts = parts.map(p => p.trim());
+                if (parts.length !== 4) {
+                    skippedCount++;
+                    errorDetails.push(`Baris ${i + 1}: Format kolom tidak valid (diharapkan 4 kolom, ditemukan ${parts.length}). Baris: "${lines[i]}"`);
+                    continue;
+                }
+                const [id, name, studentClass, studentRoom] = parts;
+                const paddedId = padStudentId(id);
+                if (!/^\d+$/.test(id)) {
+                    skippedCount++;
+                    errorDetails.push(`Baris ${i + 1}: ID Siswa '${id}' tidak valid (harus angka).`);
+                    continue;
+                }
+                const upperCaseClass = studentClass.toUpperCase();
+                if (!VALID_ROMBELS.includes(upperCaseClass)) {
+                    skippedCount++;
+                    errorDetails.push(`Baris ${i + 1}: Kelas '${studentClass}' tidak valid.`);
+                    continue;
+                }
+                const targetDbName = rombelToDbMap[upperCaseClass];
+                if (!targetDbName || !dbInstances[targetDbName]) { 
+                    skippedCount++;
+                    errorDetails.push(`Baris ${i + 1}: Kelas '${studentClass}' tidak memiliki konfigurasi database yang valid.`);
+                    continue;
+                }
+                if (studentCache.some(s => s.id === paddedId && s.firebaseGroup === targetDbName)) {
+                    skippedCount++;
+                    errorDetails.push(`Baris ${i + 1}: ID Siswa '${id}' sudah ada di kelas ${studentClass}.`);
+                    continue;
+                }
+                if (!name) {
+                    skippedCount++;
+                    errorDetails.push(`Baris ${i + 1}: Nama Siswa tidak boleh kosong.`);
+                    continue;
+                }
+                const newRef = push(ref(dbInstances[targetDbName], 'students'));
+                if (!batchUpdateMap[targetDbName]) batchUpdateMap[targetDbName] = {};
+                batchUpdateMap[targetDbName][newRef.key] = { id: paddedId, name: name.toUpperCase().replace(/'/g, ''), class: upperCaseClass, room: padRoomNumber(studentRoom), isLoggedIn: false };
+                importedCount++;
+            }
+            let firebaseErrors = [];
+            try {
+                const batchPromises = Object.keys(batchUpdateMap).map(dbName => {
+                    if (Object.keys(batchUpdateMap[dbName]).length > 0) {
+                        return update(ref(dbInstances[dbName], 'students'), batchUpdateMap[dbName]);
+                    }
+                    return Promise.resolve();
+                }).filter(Boolean);
+                await Promise.all(batchPromises);
+                showNotification(`${importedCount} siswa berhasil diimpor!`);
+            } catch (error) {
+                showNotification(`Gagal mengimpor data ke Firebase: ${error.message}`);
+                firebaseErrors.push(`Firebase Error: ${error.message}`);
+            } finally {
+                isImporting = false;
+                loadingOverlay.style.display = 'none';
+                closeImportStudentModal();
+                showImportResult(importedCount, skippedCount, errorDetails.concat(firebaseErrors));
+            }
+        };
+        reader.readAsText(file);
+    };
+    
+    window.confirmEmptyStudents = async () => {
+        if (document.getElementById('emptyStudentsPassword').value !== ADMIN_PASS) {
+            return document.getElementById('emptyStudentsPasswordError').innerText = "Password salah!";
+        }
+        loadingOverlay.style.display = 'flex';
+        try {
+            const deletePromises = Object.values(dbInstances).flatMap(db => [
+                remove(ref(db, 'students')), remove(ref(db, 'exam_access_status')),
+                remove(ref(db, 'submitted_exams')), remove(ref(db, 'student_answers'))
+            ]);
+            await Promise.all(deletePromises);
+            showNotification('Semua data peserta berhasil dikosongkan!');
+        } catch (error) {
+            showNotification('Gagal mengosongkan data peserta: ' + error.message);
+        } finally {
+            loadingOverlay.style.display = 'none';
+            closeEmptyStudentsModal();
+        }
+    };
+
+    window.promptEmptyTokens = () => {
+        document.getElementById('emptyTokensPassword').value = '';
+        document.getElementById('emptyTokensPasswordError').innerText = '';
+        document.getElementById('emptyTokensModal').style.display = 'flex';
+    };
+
+    window.confirmEmptyTokens = async () => {
+        if (document.getElementById('emptyTokensPassword').value !== ADMIN_PASS) {
+            document.getElementById('emptyTokensPasswordError').innerText = "Password salah!";
+            return;
+        }
+        loadingOverlay.style.display = 'flex';
+        try {
+            const deletePromises = Object.values(dbInstances).flatMap(db => [ remove(ref(db, 'tokens')), remove(ref(db, 'exam_access_status')), remove(ref(db, 'submitted_exams')), remove(ref(db, 'student_answers')) ]);
+            await Promise.all(deletePromises);
+            showNotification('Semua token dan data terkait berhasil dikosongkan!');
+        } catch (error) {
+            showNotification('Gagal mengosongkan token: ' + error.message);
+        } finally {
+            loadingOverlay.style.display = 'none';
+            closeEmptyTokensModal();
+        }
+    };
+    window.closeEmptyTokensModal = () => document.getElementById('emptyTokensModal').style.display = 'none';
+    
+    function populateExamStatusFilter() {
+        examStatusFilterDropdown.innerHTML = '<option value="">PILIH TOKEN UJIAN</option>';
+        Array.from(consolidatedTokensMap.values())
+            .sort((a,b) => (a.subject.localeCompare(b.subject) || a.kelas.localeCompare(b.kelas)))
+            .forEach(token => {
+                const option = document.createElement('option');
+                option.value = Array.from(token.firebaseKeys)[0]; 
+                option.innerText = `${token.token} (${token.subject} Kls ${token.kelas})`;
+                examStatusFilterDropdown.appendChild(option);
+        });
+    }
+    
+    function generateAbbreviation(subjectName) {
+        if (!subjectName) return 'N/A';
+        const upperSubject = subjectName.toUpperCase();
+        const words = upperSubject.split(' ').filter(word => word !== 'DAN' && word !== 'DAN,');
+        if (words.length >= 3) return words.map(w => w[0]).join('');
+        if (words.length === 2) return words[0][0] + words[1].substring(0, 3);
+        if (words.length === 1) return words[0].substring(0, 4);
+        return upperSubject.substring(0, 4);
+    }
+
+    function resetScoreTable() {
+        scoreTableHeader.innerHTML = '';
+        scoreTableBody.innerHTML = '';
+        scorePaginationDiv.innerHTML = '';
+        scoreTableMessage.style.display = 'block';
+        document.getElementById('scoreTable').style.display = 'none';
+    }
+
+    window.renderScoreTable = (page = 1) => {
+        currentPageScore = page;
+        if (window.currentScoreGradeFilter === 'ALL') {
+            resetScoreTable();
+            return;
+        }
+        scoreTableMessage.style.display = 'none';
+        document.getElementById('scoreTable').style.display = 'table';
+        let studentsToDisplay = studentCache.filter(student => getNumericClass(student.class) === window.currentScoreGradeFilter);
+
+        const scoreSearchName = document.getElementById('scoreSearchName').value.trim().toUpperCase();
+        if (scoreSearchName) studentsToDisplay = studentsToDisplay.filter(student => student.name.toUpperCase().includes(scoreSearchName));
+        const scoreSearchClass = document.getElementById('scoreSearchClass').value.trim().toUpperCase();
+        if (scoreSearchClass) studentsToDisplay = studentsToDisplay.filter(student => student.class.toUpperCase().includes(scoreSearchClass));
+
+        studentsToDisplay.sort((a, b) => {
+            const classA = String(a.class || '');
+            const classB = String(b.class || '');
+            const classCompare = classA.localeCompare(classB);
+            if (classCompare !== 0) return classCompare;
+
+            const nameA = String(a.name || '').toUpperCase();
+            const nameB = String(b.name || '').toUpperCase();
+            return nameA.localeCompare(nameB);
+        });
+
+        const relevantTokens = tokenCache.filter(t => getNumericClass(t.kelas) === window.currentScoreGradeFilter);
+        const subjects = [...new Set(relevantTokens.map(t => t.subject))].sort();
+        const theadContent = document.createElement('tr');
+        theadContent.innerHTML = '<th>NO</th><th>NAMA SISWA</th><th>KELAS</th>';
+        subjects.forEach(subject => { theadContent.innerHTML += `<th>${generateAbbreviation(subject)}</th>`; });
+        scoreTableHeader.innerHTML = '';
+        scoreTableHeader.appendChild(theadContent);
+        filteredScores = studentsToDisplay;
+        const totalPages = Math.ceil(filteredScores.length / selectedItemsPerPage);
+        const startIndex = (currentPageScore - 1) * selectedItemsPerPage;
+        const endIndex = startIndex + selectedItemsPerPage;
+        const scoresForPage = filteredScores.slice(startIndex, endIndex);
+        scoreTableBody.innerHTML = '';
+        scoresForPage.forEach((student, index) => {
+            const row = document.createElement('tr');
+            let rowContent = `<td>${startIndex + index + 1}</td><td>${escapeHtmlAttributeForJsString(student.name)}</td><td>${escapeHtmlAttributeForJsString(student.class)}</td>`;
+            subjects.forEach(subject => {
+                let score = '-';
+                const tokenInfo = Array.from(consolidatedTokensMap.values()).find(t => t.subject === subject && getNumericClass(t.kelas) === getNumericClass(student.class));
+                if (tokenInfo) {
+                    for (const fbKey of Array.from(tokenInfo.firebaseKeys)) {
+                         const answerData = studentAnswersCache[fbKey]?.[student.id];
+                         if (answerData) { score = calculateScore(answerData.answers, tokenInfo.answerKey); break; }
+                    }
+                }
+                rowContent += `<td>${score}</td>`;
+            });
+            row.innerHTML = rowContent;
+            scoreTableBody.appendChild(row);
+        });
+        renderPaginationControls(scorePaginationDiv, currentPageScore, totalPages, 'renderScoreTable');
+    }; 
+    
+    function calculateScore(studentAnswersString, answerKeyString) {
+        if (!answerKeyString || !studentAnswersString) return 0;
+        const correctAnswers = answerKeyString.split(',').filter(k => k.trim() !== '');
+        const studentAnswers = studentAnswersString.split(',');
+        const totalQuestions = correctAnswers.length;
+        if (totalQuestions === 0) return 0;
+        let correctCount = 0;
+        for (let i = 0; i < totalQuestions; i++) {
+            if (i < studentAnswers.length && studentAnswers[i] && correctAnswers[i] && studentAnswers[i].trim().toUpperCase() === correctAnswers[i].trim().toUpperCase()) {
+                correctCount++;
+            }
+        }
+        return parseFloat(((correctCount / totalQuestions) * 100).toFixed(2));
+    }
+    
+    window.promptResetStudent = (key, id, name, studentClass) => { studentKeyForAction = key; studentIdForAction = id; studentNameForAction = name; studentClassForAction = studentClass; document.getElementById('resetStudentNameDisplay').innerText = name; document.getElementById('resetStudentIdDisplay').innerText = id; document.getElementById('resetStudentModal').style.display = 'flex'; };
+    window.confirmResetStudent = async () => {
+        if (!studentIdForAction || !studentClassForAction) return;
+        const targetDb = getDbForClass(studentClassForAction);
+        if (!targetDb || Array.isArray(targetDb)) return showNotification("Gagal: Database tidak ditemukan.");
+        const student = studentCache.find(s => s.key === studentKeyForAction);
+        if (student && student.isLoggedIn === false) { showNotification(`Siswa ${studentIdForAction} sudah dalam status direset.`); closeResetStudentModal(); return; }
+        loadingOverlay.style.display = 'flex';
+        try {
+            const updates = {};
+            updates[`students/${studentKeyForAction}/isLoggedIn`] = false;
+            const relevantTokens = tokenCache.filter(token => getNumericClass(token.kelas) === getNumericClass(studentClassForAction) && token.firebaseGroup === targetDb.app.name);
+            for (const token of relevantTokens) { updates[`exam_access_status/${token.key}/${studentIdForAction}/isLoggedIn`] = null; }
+            await update(ref(targetDb, '/'), updates);
+            showNotification(`Status login siswa ${studentIdForAction} berhasil direset.`);
+        } catch (error) { showNotification("Gagal mereset status login: " + error.message); } finally { loadingOverlay.style.display = 'none'; closeResetStudentModal(); }
+    };
+    window.promptSubmitAnswer = (key, id, name, studentClass) => { studentKeyForAction = key; studentIdForAction = id; studentNameForAction = name; studentClassForAction = studentClass; document.getElementById('submitStudentNameDisplay').innerText = name; document.getElementById('submitStudentIdDisplay').innerText = id; document.getElementById('submitAnswerModal').style.display = 'flex'; };
+    window.confirmSubmitAnswer = async () => {
+        if (!studentIdForAction || !studentClassForAction) return;
+        const targetDb = getDbForClass(studentClassForAction);
+        if (!targetDb || Array.isArray(targetDb)) return showNotification("Gagal: Database tidak ditemukan.");
+        loadingOverlay.style.display = 'flex';
+        try {
+            const updates = {};
+            const relevantTokens = tokenCache.filter(token => getNumericClass(token.kelas) === getNumericClass(studentClassForAction) && token.firebaseGroup === targetDb.app.name);
+            for (const token of relevantTokens) { updates[`submitted_exams/${token.key}/${studentIdForAction}/isSubmitted`] = true; updates[`submitted_exams/${token.key}/${studentIdForAction}/timestamp`] = Date.now(); }
+            if(Object.keys(updates).length > 0){ await update(ref(targetDb, '/'), updates); showNotification(`Jawaban siswa ${studentIdForAction} berhasil disubmit.`); } else { showNotification('Tidak ada ujian aktif untuk disubmit.'); }
+        } catch (error) { showNotification("Gagal mengirim jawaban: " + error.message); } finally { loadingOverlay.style.display = 'none'; closeSubmitAnswerModal(); }
+    };
+    window.promptDeleteAnswer = (key, id, name, studentClass) => { studentKeyForAction = key; studentIdForAction = id; studentNameForAction = name; studentClassForAction = studentClass; document.getElementById('deleteAnswerStudentNameDisplay').innerText = name; document.getElementById('deleteAnswerStudentIdDisplay').innerText = id; document.getElementById('deleteAnswerPassword').value = ''; document.getElementById('deleteAnswerPasswordError').innerText = ''; document.getElementById('deleteAnswerModal').style.display = 'flex'; };
+    window.confirmDeleteAnswer = async () => {
+        if (document.getElementById('deleteAnswerPassword').value !== ADMIN_PASS) { return document.getElementById('deleteAnswerPasswordError').innerText = "Password salah!"; }
+        if (!studentIdForAction || !studentClassForAction) return;
+        const targetDb = getDbForClass(studentClassForAction);
+        if (!targetDb || Array.isArray(targetDb)) return showNotification("Gagal: Database tidak ditemukan.");
+        loadingOverlay.style.display = 'flex';
+        try {
+            const updates = {};
+            const relevantTokens = tokenCache.filter(token => getNumericClass(token.kelas) === getNumericClass(studentClassForAction) && token.firebaseGroup === targetDb.app.name);
+            for (const token of relevantTokens) { updates[`submitted_exams/${token.key}/${studentIdForAction}`] = null; updates[`student_answers/${token.key}/${studentIdForAction}`] = null; updates[`exam_access_status/${token.key}/${studentIdForAction}`] = null; }
+            await update(ref(targetDb, '/'), updates);
+            showNotification(`Semua jawaban siswa ${studentIdForAction} berhasil dihapus.`);
+        } catch (error) { showNotification("Gagal menghapus jawaban: " + error.message); } finally { loadingOverlay.style.display = 'none'; closeDeleteAnswerModal(); }
+    };
+    function loadSetlokasiSettings() { onValue(ref(dbInstances['7ABC'], 'setlokasi'), (snapshot) => { const settings = snapshot.val(); if (settings) { isLocationEnabledAdmin = settings.isLocationEnabled || false; allowedRadiusMeterAdmin = (settings.allowedRadiusKm || 0.075) * 1000; } updateSetlokasiStatusDisplay(); }, (error) => console.error("Error memuat pengaturan lokasi:", error)); }
+    function loadLockSettings() { onValue(ref(dbInstances['7ABC'], 'lock_settings'), (snapshot) => { const settings = snapshot.val(); if (settings) { isLockEnabledAdmin = settings.isLockEnabled || false; currentLockKeyAdmin = settings.lockKey || "KUNCI"; toleranceLimitAdmin = 3; } renderLockSettingsTable(); }, (error) => console.error("Error memuat pengaturan kunci:", error)); }
+    function periksaAndUpdateStatusToken() { const now = new Date(); tokenCache.forEach(tokenData => { const newIsActive = tokenData.isForceActive ? true : (now >= new Date(tokenData.startTime) && now < new Date(tokenData.endTime)); if (tokenData.isActive !== newIsActive) { const targetDb = dbInstances[tokenData.firebaseGroup]; if (targetDb) { update(ref(targetDb, 'tokens/' + tokenData.key), { isActive: newIsActive }).catch(e => console.error(e)); } } }); }
+    function loadTokenAccessStatus() { Object.keys(dbInstances).forEach(dbName => { onValue(ref(dbInstances[dbName], 'exam_access_status'), (snapshot) => { Object.assign(tokenAccessStatus, snapshot.val() || {}); updateDashboard(); }); }); }
+    function loadSubmittedExamsStatus() { Object.keys(dbInstances).forEach(dbName => { onValue(ref(dbInstances[dbName], 'submitted_exams'), (snapshot) => { Object.assign(submittedExamsCache, snapshot.val() || {}); updateDashboard(); }); }); }
+    function loadStudentAnswers() { Object.keys(dbInstances).forEach(dbName => { onValue(ref(dbInstances[dbName], 'student_answers'), (snapshot) => { Object.assign(studentAnswersCache, snapshot.val() || {}); if (window.currentScoreGradeFilter !== 'ALL') { window.renderScoreTable(currentPageScore); } }); }); }
+    function updateSetlokasiStatusDisplay() { locationSettingsTableBody.innerHTML = ''; const row = document.createElement('tr'); const statusText = isLocationEnabledAdmin ? 'ON' : 'OFF'; const statusColor = isLocationEnabledAdmin ? 'green' : 'red'; row.innerHTML = `<td><a href="http://maps.google.com/maps?q=${escapeHtmlAttributeForJsString(defaultLocationCoordinate)}" target="_blank">${defaultLocationCoordinate}</a></td><td>${allowedRadiusMeterAdmin}m</td><td style="color: ${statusColor}; font-weight: bold;">${statusText}</td><td><button class="icon-button" onclick="openSetlokasiModal()" title="Atur Lokasi"><i class="fas fa-map-marker-alt"></i></button></td>`; locationSettingsTableBody.appendChild(row); }
+    function renderLockSettingsTable() { lockSettingsTableBody.innerHTML = ''; const row = document.createElement('tr'); const statusText = isLockEnabledAdmin ? 'ON' : 'OFF'; const statusColor = isLockEnabledAdmin ? 'green' : 'red'; row.innerHTML = `<td>${escapeHtmlAttributeForJsString(currentLockKeyAdmin)}</td><td>${toleranceLimitAdmin}</td><td style="color: ${statusColor}; font-weight: bold;">${statusText}</td><td><button class="icon-button edit" onclick="openSetLockModal()" title="Atur Kunci"><i class="fas fa-edit"></i></button></td>`; lockSettingsTableBody.appendChild(row); }
+    window.openSetlokasiModal = () => document.getElementById('setlokasiModal').style.display = 'flex'; window.closeSetlokasiModal = () => document.getElementById('setlokasiModal').style.display = 'none'; window.openGantiRadiusModal = () => { document.getElementById('gantiRadiusModal').style.display = 'flex'; document.getElementById('radiusMeter').value = allowedRadiusMeterAdmin; closeSetlokasiModal(); }; window.closeGantiRadiusModal = () => document.getElementById('gantiRadiusModal').style.display = 'none'; window.aktifkanLokasi = async () => { await Promise.all(allSetlokasiRefs.map(dbRef => update(dbRef, { isLocationEnabled: true }))); showNotification('Fitur lokasi berhasil diaktifkan.'); closeSetlokasiModal(); }; window.nonaktifkanLokasi = async () => { await Promise.all(allSetlokasiRefs.map(dbRef => update(dbRef, { isLocationEnabled: false }))); showNotification('Fitur lokasi berhasil dinonaktifkan.'); closeSetlokasiModal(); }; window.gantiRadiusDanAktifkan = async () => { const radiusMeter = parseInt(document.getElementById('radiusMeter').value); if (isNaN(radiusMeter) || radiusMeter <= 0) return showNotification('Masukkan radius yang valid.'); await Promise.all(allSetlokasiRefs.map(dbRef => update(dbRef, { allowedRadiusKm: radiusMeter / 1000, isLocationEnabled: true }))); showNotification(`Radius lokasi diubah menjadi ${radiusMeter} meter dan diaktifkan.`); closeGantiRadiusModal(); }; window.openSetLockModal = () => document.getElementById('setLockModal').style.display = 'flex'; window.closeSetLockModal = () => document.getElementById('setLockModal').style.display = 'none'; window.openGantiKunciBatasModal = () => { document.getElementById('gantiKunciBatasModal').style.display = 'flex'; document.getElementById('lockKeyInput').value = currentLockKeyAdmin; document.getElementById('toleranceLimitInput').value = toleranceLimitAdmin; closeSetLockModal(); }; window.closeGantiKunciBatasModal = () => document.getElementById('gantiKunciBatasModal').style.display = 'none'; window.aktifkanKunci = async () => { await Promise.all(allLockSettingsRefs.map(dbRef => update(dbRef, { isLockEnabled: true }))); showNotification('Fitur kunci berhasil diaktifkan.'); closeSetLockModal(); }; window.nonaktifkanKunci = async () => { await Promise.all(allLockSettingsRefs.map(dbRef => update(dbRef, { isLocationEnabled: false }))); showNotification('Fitur kunci berhasil dinonaktifkan.'); closeSetLockModal(); }; window.gantiKunciDanBatas = async () => { const newLockKey = document.getElementById('lockKeyInput').value.trim().toUpperCase(); const newToleranceLimit = parseInt(document.getElementById('toleranceLimitInput').value); if (!newLockKey || isNaN(newToleranceLimit) || newToleranceLimit < 0) return showNotification('Data tidak valid'); await Promise.all(allLockSettingsRefs.map(dbRef => update(dbRef, { lockKey: newLockKey, toleranceLimit: newToleranceLimit, isLockEnabled: true }))); showNotification(`Kunci diubah menjadi '${newLockKey}' dan batas toleransi menjadi ${newToleranceLimit}.`); closeGantiKunciBatasModal(); };
+
+    function updateDashboard() { if(document.getElementById('dashboardSection').style.display !== 'block') return; updateHighlightCards(); renderProgressCards(); }
+    
+    function updateHighlightCards() {
+        const activeConsolidatedTokens = Array.from(consolidatedTokensMap.values()).filter(t => t.isActive || t.isForceActive);
+        const activeTokenKeys = new Set(activeConsolidatedTokens.flatMap(t => Array.from(t.firebaseKeys)));
+        let onlineCount = 0;
+        let submittedCount = 0;
+        for (const tokenKey in tokenAccessStatus) { for (const studentId in tokenAccessStatus[tokenKey]) { if (tokenAccessStatus[tokenKey][studentId]?.isLoggedIn) { onlineCount++; } } }
+        for (const tokenKey in submittedExamsCache) { if (activeTokenKeys.has(tokenKey)) { submittedCount += Object.keys(submittedExamsCache[tokenKey]).length; } }
+        highlightCardsContainer.innerHTML = `
+            <div class="highlight-card"><span class="icon active-exams"><i class="fas fa-play-circle"></i></span><div class="info"><h3>${activeConsolidatedTokens.length}</h3><p>Ujian Aktif</p></div></div>
+            <div class="highlight-card"><span class="icon online-users"><i class="fas fa-user-clock"></i></span><div class="info"><h3>${onlineCount}</h3><p>Peserta Online</p></div></div>
+            <div class="highlight-card"><span class="icon submitted-users"><i class="fas fa-check-double"></i></span><div class="info"><h3>${submittedCount}</h3><p>Total Submit</p></div></div>
+            <div class="highlight-card"><span class="icon total-users"><i class="fas fa-users"></i></span><div class="info"><h3>${studentCache.length}</h3><p>Total Peserta</p></div></div>`;
+    }
+
+    function renderProgressCards() {
+        progressCardsContainer.innerHTML = '';
+        Object.values(countdownIntervals).forEach(clearInterval);
+        countdownIntervals = {};
+        const activeConsolidatedTokens = Array.from(consolidatedTokensMap.values()).filter(t => t.isActive || t.isForceActive);
+        if(activeConsolidatedTokens.length === 0){ progressCardsContainer.innerHTML = '<p>Tidak ada ujian yang sedang aktif saat ini.</p>'; return; }
+        activeConsolidatedTokens.forEach(token => {
+            const studentsInClass = studentCache.filter(s => getNumericClass(s.class) === getNumericClass(token.kelas));
+            const totalStudents = studentsInClass.length;
+            let submittedCount = 0, workingCount = 0;
+            studentsInClass.forEach(student => {
+                 let isSubmitted = false, isLoggedIn = false;
+                 for (const fbKey of token.firebaseKeys) {
+                     if (submittedExamsCache[fbKey]?.[student.id]?.isSubmitted) { isSubmitted = true; break; }
+                     if(tokenAccessStatus[fbKey]?.[student.id]?.isLoggedIn) { isLoggedIn = true; }
+                 }
+                 if(isSubmitted) submittedCount++;
+                 else if (isLoggedIn) workingCount++;
+            });
+            const notStartedCount = totalStudents - submittedCount - workingCount;
+            const card = document.createElement('div');
+            card.className = 'progress-card';
+            card.innerHTML = `
+                <div class="progress-card-header"><h4>${token.subject} - KELAS ${token.kelas}</h4><span class="token-code">${token.token}</span></div>
+                <div class="progress-card-body">
+                    ${createProgressBar('Sudah Submit', submittedCount, totalStudents, '#27ae60')}
+                    ${createProgressBar('Mengerjakan', workingCount, totalStudents, '#f39c12')}
+                    ${createProgressBar('Belum Login', notStartedCount, totalStudents, '#bdc3c7')}
+                </div>
+                <div class="progress-card-footer">
+                    <div class="status-text" id="status-text-${token.key}"></div>
+                    <button class="text-button light-blue" style="padding: 5px 10px; font-size: 0.8em;" onclick="navigateToStudentManagement('${getNumericClass(token.kelas)}')">Kelola Peserta</button>
+                </div>`;
+            progressCardsContainer.appendChild(card);
+            const statusEl = document.getElementById(`status-text-${token.key}`);
+            if (token.isForceActive) {
+                statusEl.className = 'status-text forced';
+                statusEl.innerHTML = "PAKSA AKTIF";
+            } else {
+                const endTime = new Date(token.endTime).getTime();
+                countdownIntervals[token.key] = setInterval(() => {
+                    const now = new Date().getTime();
+                    const distance = endTime - now;
+                    if (distance < 0) {
+                        clearInterval(countdownIntervals[token.key]);
+                        statusEl.className = 'status-text expired';
+                        statusEl.innerHTML = "WAKTU HABIS";
+                        return;
+                    }
+                    statusEl.className = 'status-text';
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    statusEl.innerHTML = `<span class="countdown">${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}</span> <span class="end-time">(Selesai ${new Date(token.endTime).toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'})})</span>`;
+                }, 1000);
+            }
+        });
+    }
+
+    function createProgressBar(label, value, total, color) {
+        const percentage = total > 0 ? (value / total) * 100 : 0;
+        const percentageInsideBar = percentage > 15 ? `${Math.round(percentage)}%` : ''; 
+        return `
+            <div class="progress-item">
+                <div class="progress-text-info">
+                    <span>${label}</span>
+                    <span>${value}/${total} (${Math.round(percentage)}%)</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" style="width: ${percentage}%; background-color: ${color};">
+                        ${percentageInsideBar}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    window.navigateToStudentManagement = (kelas) => {
+        showSection('studentSection');
+        document.getElementById('studentSearchClass').value = kelas;
+        renderStudentTable(1);
+    }
+    
+    window.performBackup = async () => {
+        loadingOverlay.style.display = 'flex';
+        try {
+            const backupData = {
+                backupTimestamp: new Date().toISOString(),
+                firebaseData: {}
+            };
+
+            const collectionsToBackup = [
+                'tokens', 'students', 'exam_access_status', 'submitted_exams',
+                'student_answers', 'setlokasi', 'lock_settings'
+            ];
+
+            const fetchPromises = [];
+            for (const dbName in dbInstances) {
+                if (dbInstances.hasOwnProperty(dbName)) {
+                    backupData.firebaseData[dbName] = {};
+                    for (const collectionName of collectionsToBackup) {
+                        fetchPromises.push(
+                            get(ref(dbInstances[dbName], collectionName)).then(snapshot => {
+                                backupData.firebaseData[dbName][collectionName] = snapshot.val();
+                            }).catch(error => {
+                                console.warn(`Gagal mengambil data ${collectionName} dari ${dbName}:`, error);
+                                backupData.firebaseData[dbName][collectionName] = null;
+                            })
+                        );
+                    }
+                }
+            }
+
+            await Promise.all(fetchPromises);
+
+            const jsonString = JSON.stringify(backupData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `firebase_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showNotification('Backup data berhasil diunduh!');
+
+        } catch (error) {
+            console.error('Gagal melakukan backup:', error);
+            showNotification('Gagal melakukan backup: ' + error.message);
+        } finally {
+            loadingOverlay.style.display = 'none';
+        }
+    };
+
+    window.openRestorePasswordModal = () => {
+        document.getElementById('restoreAdminPassword').value = '';
+        document.getElementById('restoreAdminPasswordError').innerText = '';
+        document.getElementById('restorePasswordModal').style.display = 'flex';
+    };
+
+    window.closeRestorePasswordModal = () => {
+        document.getElementById('restorePasswordModal').style.display = 'none';
+    };
+
+    window.checkRestoreAdminPassword = () => {
+        const passwordInput = document.getElementById('restoreAdminPassword').value;
+        const errorDisplay = document.getElementById('restoreAdminPasswordError');
+
+        if (passwordInput === ADMIN_PASS) {
+            closeRestorePasswordModal(); 
+            document.getElementById('backupFileInput').value = '';
+            document.getElementById('restoreFileError').innerText = '';
+            document.getElementById('restoreModal').style.display = 'flex';
+        } else {
+            errorDisplay.innerText = 'Password Admin salah!';
+        }
+    };
+
+    window.closeRestoreModal = () => {
+        document.getElementById('restoreModal').style.display = 'none';
+    };
+
+    window.confirmRestore = async () => {
+        const fileInput = document.getElementById('backupFileInput');
+        const file = fileInput.files[0];
+        const restoreFileError = document.getElementById('restoreFileError');
+        restoreFileError.innerText = '';
+
+        if (!file) {
+            restoreFileError.innerText = 'Pilih file backup JSON terlebih dahulu.';
+            return;
+        }
+        if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+            restoreFileError.innerText = 'File harus berformat JSON.';
+            return;
+        }
+
+        if (!confirm('Anda yakin ingin memulihkan data? Ini akan MENIMPA SEMUA DATA yang ada di database Anda dengan data dari file backup. Tindakan ini TIDAK DAPAT DIBATALKAN.')) {
+            return;
+        }
+
+        loadingOverlay.style.display = 'flex';
+        const reader = new FileReader();
+
+        reader.onload = async (e) => {
+            try {
+                const backupContent = JSON.parse(e.target.result);
+
+                if (!backupContent.firebaseData) {
+                    throw new Error('Format file backup tidak valid. Missing "firebaseData" root.');
+                }
+
+                const clearPromises = [];
+                const collectionsToClear = [
+                    'tokens', 'students', 'exam_access_status', 'submitted_exams',
+                    'student_answers', 'setlokasi', 'lock_settings'
+                ];
+                for (const dbName in dbInstances) {
+                    if (dbInstances.hasOwnProperty(dbName)) {
+                        for (const collectionName of collectionsToClear) {
+                            clearPromises.push(remove(ref(dbInstances[dbName], collectionName))
+                                .catch(error => console.warn(`Gagal menghapus ${collectionName} dari ${dbName} saat membersihkan:`, error)));
+                        }
+                    }
+                }
+                await Promise.all(clearPromises);
+                
+                const restorePromises = [];
+                for (const dbName in backupContent.firebaseData) {
+                    if (dbInstances.hasOwnProperty(dbName)) {
+                        const dbInstance = dbInstances[dbName];
+                        const dbData = backupContent.firebaseData[dbName];
+
+                        for (const collectionName in dbData) {
+                            if (dbData.hasOwnProperty(collectionName) && dbData[collectionName] !== null) {
+                                restorePromises.push(set(ref(dbInstance, collectionName), dbData[collectionName])
+                                    .catch(error => {
+                                        console.error(`Gagal memulihkan ${collectionName} untuk ${dbName}:`, error);
+                                    })
+                                );
+                            }
+                        }
+                    } else {
+                        console.warn(`Melewatkan data untuk grup Firebase tidak dikenal: ${dbName}`);
+                    }
+                }
+
+                await Promise.all(restorePromises);
+
+                showNotification('Data berhasil dipulihkan dari backup!');
+                closeRestoreModal();
+                initializeAppState();
+                
+            } catch (error) {
+                console.error('Gagal memulihkan data:', error);
+                restoreFileError.innerText = 'Gagal memproses file backup: ' + error.message;
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        };
+
+        reader.onerror = () => {
+            loadingOverlay.style.display = 'none';
+            restoreFileError.innerText = 'Gagal membaca file.';
+        };
+
+        reader.readAsText(file);
+    };
+    
+  </script>
+</body>
+</html>
