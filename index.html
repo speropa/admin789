@@ -1411,7 +1411,7 @@
       if (!originalGoogleDriveUrl.startsWith('http')) return document.getElementById('addGoogleDriveUrlError').innerText = "URL Google Drive tidak valid.";
       if (tokenCache.some(item => item.token === t && getNumericClass(item.kelas) === getNumericClass(k))) return em.innerText = "Token (Base Token) sudah ada untuk kelas ini!";
       loadingOverlay.style.display = 'flex';
-      const adjustedStartTime = new Date(originalStartTime.getTime() + 30000); 
+      const adjustedStartTime = originalStartTime;
       const durationMinutes = Math.round((originalEndTime.getTime() - adjustedStartTime.getTime()) / 60000);
       const data = { subject: s, kelas: k, token: t, googleDriveUrl: googleDriveUrlPreview, originalGoogleDriveUrl, answerKey, startTime: formatLocalDateTime(adjustedStartTime), endTime: endTimeInput, durationMinutes, createdAt: Date.now(), isActive: false, isForceActive: false };
       try {
@@ -1468,7 +1468,7 @@
       if (!originalGoogleDriveUrl.startsWith('http')) return document.getElementById('editGoogleDriveUrlError').innerText = "URL Google Drive tidak valid.";
       if (Array.from(consolidatedTokensMap.values()).some(item => item.token === t && item.kelas === newKelas && !(item.token === oldBaseToken && item.kelas === oldKelas))) return em.innerText = "Token (Base Token) sudah ada untuk kelas ini!";
       loadingOverlay.style.display = 'flex';
-      const adjustedStartTime = new Date(originalStartTime.getTime() + 30000);
+      const adjustedStartTime = originalStartTime;
       const durationMinutes = Math.round((originalEndTime.getTime() - adjustedStartTime.getTime()) / 60000);
       const updatedStudentData = { subject: s, kelas: newKelas, token: t, googleDriveUrl: googleDriveUrlPreview, originalGoogleDriveUrl, answerKey, startTime: formatLocalDateTime(adjustedStartTime), endTime: endTimeInput, durationMinutes, createdAt: currentConsolidatedTokenInfo.createdAt, isForceActive: currentConsolidatedTokenInfo.isForceActive, isActive: currentConsolidatedTokenInfo.isActive };
       try {
