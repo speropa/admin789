@@ -508,6 +508,15 @@
     .status-text.expired { color: #e74c3c; font-weight: bold; }
     .status-text .countdown { font-weight: bold; }
     .status-text .end-time { color: #7f8c8d; }
+    /* Gaya untuk pesan di menu Peserta */
+    #studentTableDescription {
+      color: #e74c3c; /* Merah */
+      font-weight: bold;
+      font-size: 1.1em; /* Lebih besar dari default */
+      text-align: center;
+      margin: 20px 0;
+      animation: fadeIn 0.5s ease-out; /* Tambahkan animasi fade-in */
+    }
     @keyframes fadeIn {
         from { opacity: 0; transform: translateY(-10px); }
         to { opacity: 1; transform: translateY(0); }
@@ -559,6 +568,10 @@
       </button>
       <button id="tokenMenuBtn" data-section-id="tokenSection" onclick="handleMenuClick(this)">
         <i class="fas fa-key"></i> <span>Token</span>
+      </button>
+      <!-- Menu baru: Status Ujian -->
+      <button id="examStatusMenuBtn" data-section-id="examStatusSelectionSection" onclick="handleMenuClick(this)">
+        <i class="fas fa-tasks"></i> <span>Status Ujian</span>
       </button>
       <button id="pesertaMenuBtn" data-section-id="studentSection" onclick="handleMenuClick(this)">
         <i class="fas fa-users"></i> <span>Peserta</span>
@@ -638,6 +651,25 @@
           </table>
         </div>
       </div>
+      <div id="examStatusSelectionSection" class="dashboard-section container">
+        <h1 style="text-align: left; color: #34495e;">Status Peserta</h1>
+        <p style="font-size: 0.9em; color: #555; margin-top: 5px; margin-bottom: 15px;">
+          Pilihlah token ujian yang akan ditampilkan di menu peserta.
+        </p>
+        <div style="margin-bottom: 15px;">
+          <label for="grade7TokenSelect" style="display: block; margin-bottom: 5px;">Kelas 7:</label>
+          <select id="grade7TokenSelect" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ddd;"></select>
+        </div>
+        <div style="margin-bottom: 15px;">
+          <label for="grade8TokenSelect" style="display: block; margin-bottom: 5px;">Kelas 8:</label>
+          <select id="grade8TokenSelect" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ddd;"></select>
+        </div>
+        <div style="margin-bottom: 20px;">
+          <label for="grade9TokenSelect" style="display: block; margin-bottom: 5px;">Kelas 9:</label>
+          <select id="grade9TokenSelect" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #ddd;"></select>
+        </div>
+        <button onclick="saveSelectedExamTokens()" class="text-button green">Simpan</button>
+      </div>
       <div id="rulesSection" class="dashboard-section container">
         <h1 id="rulesSectionTitle" style="text-align: left; margin-bottom: 20px; color: #34495e;">Pengaturan Lokasi dan Penguncian</h1>
         
@@ -695,16 +727,6 @@
                 <input type="text" id="studentSearchId" placeholder="Cari ID..." style="max-width: 150px;"/>
                 <input type="text" id="studentSearchName" placeholder="Cari Nama..." style="max-width: 200px;" />
                 <input type="text" id="studentSearchClass" placeholder="Cari Kelas..." style="max-width: 150px;" />
-                <select id="examStatusFilter" onchange="handleStudentFilterChange()">
-                </select>
-                <select id="studentOverallStatusFilter" onchange="handleStudentFilterChange()">
-                    <option value="ALL" selected>SEMUA STATUS</option>
-                    <option value="Sudah submit">Sudah Submit</option>
-                    <option value="Sedang mengerjakan">Sedang Mengerjakan</option>
-                    <option value="Belum login (reset)">Belum Login (Reset)</option>
-                    <option value="Belum login">Belum Login</option>
-                    <option value="-">Tidak Ada Ujian Relevan (-)</option>
-                </select>
                 <select id="itemsPerPageSelect" onchange="window.updateItemsPerPage(this.value)">
                     <option value="25">25 per halaman</option>
                     <option value="50">50 per halaman</option>
@@ -716,6 +738,9 @@
                 </select>
             </div>
         </div>
+        <p id="studentTableDescription">
+          Jika ingin melihat status peserta ujian, klik menu "Status Ujian" dan pilih token ujian yang ingin ditampilkan.
+        </p>
         <p id="studentTableMessage" style="text-align: center; color: #555; font-style: italic; margin: 20px 0; display: none;">
             Tidak ada token ujian yang aktif.
         </p>
@@ -728,7 +753,7 @@
                 <th>NAMA</th>
                 <th>KELAS</th>
                 <th>RUANG</th>
-                <th>STATUS</th>
+                <th id="studentStatusHeader">STATUS</th>
                 <th>AKSI</th>
               </tr>
             </thead>
@@ -1003,6 +1028,9 @@
     let toleranceLimitAdmin = 3;
     const allSetlokasiRefs = Object.values(dbInstances).map(db => ref(db, 'setlokasi'));
     const allLockSettingsRefs = Object.values(dbInstances).map(db => ref(db, 'lock_settings'));
+
+    // Variabel baru untuk fitur "Status Ujian"
+    let lastSelectedTokens = { '7': 'DEFAULT', '8': 'DEFAULT', '9': 'DEFAULT' }; // Menyimpan pilihan terakhir admin untuk setiap kelas (format: TOKEN_KELAS)
     
     const sidebar = document.getElementById('sidebar');
     const loginSection = document.getElementById('loginSection');
@@ -1014,9 +1042,6 @@
     const studentTableBody = document.getElementById('studentTableBody');
     const studentTableContainer = document.getElementById('studentTableContainer');
     const studentTableMessage = document.getElementById('studentTableMessage');
-    const examStatusFilterDropdown = document.getElementById('examStatusFilter');
-    const studentOverallStatusFilter = document.getElementById('studentOverallStatusFilter');
-    const itemsPerPageSelect = document.getElementById('itemsPerPageSelect');
     const scoreTableHeader = document.getElementById('scoreTableHeader');
     const scoreTableBody = document.getElementById('scoreTableBody');
     const scoreTableMessage = document.getElementById('scoreTableMessage');
@@ -1025,13 +1050,21 @@
     const studentPaginationDiv = document.getElementById('studentPagination');
     const scorePaginationDiv = document.getElementById('scorePagination');
 
+    // Elemen baru untuk fitur "Status Ujian"
+    const grade7TokenSelect = document.getElementById('grade7TokenSelect');
+    const grade8TokenSelect = document.getElementById('grade8TokenSelect');
+    const grade9TokenSelect = document.getElementById('grade9TokenSelect');
+    const studentStatusHeader = document.getElementById('studentStatusHeader');
+    const studentTableDescription = document.getElementById('studentTableDescription');
+
+
     const padStudentId = (id) => String(id).padStart(3, '0');
     const padRoomNumber = (room) => { if (!room) return '-'; const numRoom = parseInt(room, 10); return !isNaN(numRoom) ? String(numRoom).padStart(2, '0') : String(room).toUpperCase(); };
     const formatLocalDateTime = (date) => { const year = date.getFullYear(); const month = (date.getMonth() + 1).toString().padStart(2, '0'); const day = date.getDate().toString().padStart(2, '0'); const hours = date.getHours().toString().padStart(2, '0'); const minutes = date.getMinutes().toString().padStart(2, '0'); return `${year}-${month}-${day}T${hours}:${minutes}`; };
     const formatDisplayTime = (dateTimeString) => { if (!dateTimeString) return '-'; const date = new Date(dateTimeString); return date.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }); };
     const getNumericClass = (classString) => String(classString || '').match(/^(\d+)/)?.[1] || null;
     const getDbForClass = (classIdentifier) => { const numericClass = getNumericClass(classIdentifier); if (rombelToDbMap[classIdentifier]) { return dbInstances[rombelToDbMap[classIdentifier]]; } if (gradeToDbGroupMap[numericClass]) { return gradeToDbGroupMap[numericClass].map(dbName => dbInstances[dbName]); } console.error(`Instance database tidak ditemukan untuk identifier: ${classIdentifier}`); return null; };
-    const escapeHtmlAttributeForJsString = (s) => String(s).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escapeHtmlAttributeForJsString = (s) => String(s).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&#x3E;');
     const convertToPreviewLink = (url) => { if (!url || typeof url !== 'string') return url; return url.replace(/\/view(\?.*)?$/, '/preview'); };
     const showNotification = (message) => { const n = document.getElementById('notification'); n.innerText = message; n.style.display = 'block'; setTimeout(() => { n.style.display = 'none'; }, 3000); };
     
@@ -1051,7 +1084,8 @@
         loadSetlokasiSettings();
         loadStudentAnswers();
         loadLockSettings();
-        showSection('dashboardSection');
+        loadLastSelectedTokens(); // Muat pilihan token terakhir dari localStorage
+        showSection('dashboardSection'); // Tampilkan dashboard secara default
         resetInactivityTimer();
         collapseSidebar();
     }
@@ -1071,9 +1105,9 @@
         document.getElementById('tokenSearchSubject').addEventListener('keyup', renderTokenTable);
         document.getElementById('scoreSearchName').addEventListener('keyup', () => window.renderScoreTable(1));
         document.getElementById('scoreSearchClass').addEventListener('keyup', () => window.renderScoreTable(1));
-        document.getElementById('studentSearchId').addEventListener('keyup', handleStudentFilterChange);
-        document.getElementById('studentSearchName').addEventListener('keyup', handleStudentFilterChange);
-        document.getElementById('studentSearchClass').addEventListener('keyup', handleStudentFilterChange);
+        document.getElementById('studentSearchId').addEventListener('keyup', renderStudentTableBasedOnSelection);
+        document.getElementById('studentSearchName').addEventListener('keyup', renderStudentTableBasedOnSelection);
+        document.getElementById('studentSearchClass').addEventListener('keyup', renderStudentTableBasedOnSelection);
         document.getElementById('addTokenForm').addEventListener('submit', handleAddToken);
         document.getElementById('modalForm').addEventListener('submit', handleEditToken);
         document.getElementById('addStudentForm').addEventListener('submit', handleAddStudent);
@@ -1115,8 +1149,10 @@
              renderTokenTable();
         } else if (sectionId === 'rulesSection') {
              updateSetlokasiStatusDisplay(); renderLockSettingsTable(); 
+        } else if (sectionId === 'examStatusSelectionSection') { // Inisialisasi bagian Status Ujian
+            populateExamSelectionDropdowns();
         } else if (sectionId === 'studentSection') { 
-            initializeStudentSectionView();
+            renderStudentTableBasedOnSelection(); // Render tabel peserta berdasarkan pilihan token
         } else if (sectionId === 'scoreSection') {
             window.currentScoreGradeFilter = 'ALL';
             resetScoreTable();
@@ -1198,9 +1234,6 @@
             row.innerHTML = `<td>${index + 1}</td><td class="mapel-cell"><div class="subject-display">${escapeHtmlAttributeForJsString(data.subject)}</div><a href="${escapeHtmlAttributeForJsString(data.googleDriveUrl)}" target="_blank" class="login-link link-display">Link Soal</a></td><td>${escapeHtmlAttributeForJsString(data.kelas)}</td><td>${tokenDisplayHtml}</td><td class="time-cell">${startTimeFormatted}</td><td class="time-cell">${endTimeFormatted}</td><td class="duration-cell">${durationDisplay}</td><td>${progresHtml}</td><td><div class="action-buttons-group"><button class="icon-button edit" onclick="editTokenConsolidated('${escapeHtmlAttributeForJsString(data.token)}', '${escapeHtmlAttributeForJsString(data.kelas)}')" title="Edit Token"><i class="fas fa-edit"></i></button><button class="icon-button delete" onclick="promptDeleteConsolidated('${escapeHtmlAttributeForJsString(data.token)}', '${escapeHtmlAttributeForJsString(data.kelas)}')" title="Hapus Token"><i class="fas fa-trash-alt"></i></button></div></td>`;
             tokenTableBody.appendChild(row);
         });
-        if(document.getElementById('studentSection').style.display === 'block') {
-            initializeStudentSectionView();
-        }
     }
     
     window.promptToggleForceActive = (token, kelas, isCurrentlyActive) => {
@@ -1294,6 +1327,10 @@
                       updateDashboard();
                       renderTokenTable();
                       periksaAndUpdateStatusToken();
+                      // Perbarui dropdown pilihan ujian jika berada di halaman Status Ujian
+                      if (document.getElementById('examStatusSelectionSection').style.display === 'block') {
+                          populateExamSelectionDropdowns();
+                      }
                   }, (error) => console.error(`Error memuat token dari grup ${dbName}:`, error));
               }
           });
@@ -1389,7 +1426,7 @@
           if (getNumericClass(oldKelas) !== getNumericClass(newKelas) || oldBaseToken !== t) {
               const deletePromises = oldFirebaseKeys.flatMap(fbKey => {
                   const token = tokenCache.find(tok => tok.key === fbKey);
-                  const db = token ? dbInstances[token.firebaseGroup] : null;
+                  const db = token ? dbInstances[tok.firebaseGroup] : null;
                   return db ? [remove(ref(db, `tokens/${fbKey}`)), remove(ref(db, `exam_access_status/${fbKey}`)), remove(ref(db, `submitted_exams/${fbKey}`)), remove(ref(db, `student_answers/${fbKey}`))] : [];
               });
               await Promise.all(deletePromises);
@@ -1430,7 +1467,7 @@
         try {
             const deletePromises = Array.from(currentConsolidatedTokenInfo.firebaseKeys).flatMap(fbKey => {
                 const token = tokenCache.find(tok => tok.key === fbKey);
-                const db = token ? dbInstances[token.firebaseGroup] : null;
+                const db = token ? dbInstances[tok.firebaseGroup] : null;
                 return db ? [remove(ref(db, `tokens/${fbKey}`)), remove(ref(db, `exam_access_status/${fbKey}`)), remove(ref(db, `submitted_exams/${fbKey}`)), remove(ref(db, `student_answers/${fbKey}`))] : [];
             });
             await Promise.all(deletePromises);
@@ -1466,7 +1503,7 @@
                         return nameA.localeCompare(nameB);
                     });
                     if (document.getElementById('studentSection').style.display === 'block') {
-                         initializeStudentSectionView();
+                         renderStudentTableBasedOnSelection(); // Render berdasarkan pilihan token
                     }
                     if (document.getElementById('scoreSection').style.display === 'block') {
                         resetScoreTable();
@@ -1475,106 +1512,94 @@
             }
         });
     }
-    function initializeStudentSectionView() {
-        const now = new Date();
-        const activeTokens = Array.from(consolidatedTokensMap.values()).filter(t => t.isActive || t.isForceActive);
-        populateExamStatusFilter(Array.from(consolidatedTokensMap.values()));
-        if (activeTokens.length === 0) {
-            examStatusFilterDropdown.value = "DEFAULT";
-            currentDefaultTokenKeys = [];
-            handleStudentFilterChange();
-            return;
-        }
-        
-        const activeTokensByGrade = activeTokens.reduce((acc, token) => {
-            const grade = getNumericClass(token.kelas);
-            if (!acc[grade]) { acc[grade] = []; }
-            acc[grade].push(token);
-            return acc;
-        }, {});
-        
-        const prioritizedTokens = [];
-        for (const grade in activeTokensByGrade) {
-            let tokensForGrade = activeTokensByGrade[grade];
-            if (tokensForGrade.length === 1) {
-                prioritizedTokens.push(tokensForGrade[0]);
-            } else {
-                tokensForGrade.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
-                const bestToken = tokensForGrade.find(t => new Date(t.startTime) <= now);
-                if (bestToken) {
-                    prioritizedTokens.push(bestToken);
-                } else {
-                    prioritizedTokens.push(tokensForGrade[0]);
-                }
-            }
-        }
-        
-        examStatusFilterDropdown.value = "DEFAULT";
-        currentDefaultTokenKeys = prioritizedTokens.flatMap(t => Array.from(t.firebaseKeys));
-        renderStudentTable(currentDefaultTokenKeys, 1);
-    }
-    
-    window.handleStudentFilterChange = () => {
-        const selectedValue = examStatusFilterDropdown.value;
-        if (selectedValue === "DEFAULT") {
-            initializeStudentSectionView();
-        } else {
-            currentDefaultTokenKeys = [];
-            renderStudentTable([selectedValue], 1);
-        }
-    };
-    
-    window.renderStudentTable = (tokenKeys, page = 1) => {
+
+    window.renderStudentTable = (tokenKeysForDisplay, page = 1) => {
         currentPageStudent = page;
 
-        if (!tokenKeys || tokenKeys.length === 0) {
-            studentTableMessage.style.display = 'block';
-            studentTableContainer.style.display = 'none';
-            studentPaginationDiv.style.display = 'none';
-            studentTableBody.innerHTML = '';
-            return;
-        }
+        const isViewingSpecificExam = tokenKeysForDisplay && tokenKeysForDisplay.length > 0;
 
         studentTableMessage.style.display = 'none';
         studentTableContainer.style.display = 'block';
         studentPaginationDiv.style.display = 'flex';
-        
-        const tokensBeingViewed = tokenCache.filter(tc => tokenKeys.includes(tc.key));
-        const gradesBeingViewed = [...new Set(tokensBeingViewed.map(t => getNumericClass(t.kelas)))];
-        let studentsToDisplay = studentCache.filter(student => gradesBeingViewed.includes(getNumericClass(student.class)));
-        
+        // Menyembunyikan pesan jika ada token yang dipilih, menampilkannya jika tidak
+        studentTableDescription.style.display = isViewingSpecificExam ? 'none' : 'block';
+
+        let studentsToDisplay = [...studentCache]; // Mulai dengan semua siswa
+
+        let tokensBeingViewed = [];
+        if (isViewingSpecificExam) {
+            // Filter siswa hanya yang relevan dengan kelas dari token yang dipilih
+            // Ini memastikan hanya siswa dari kelas 7A, 7B, dll. yang ditampilkan jika token kelas 7 dipilih.
+            const gradesFromSelectedTokens = new Set();
+            tokenCache.forEach(tc => {
+                if (tokenKeysForDisplay.includes(tc.key)) {
+                    gradesFromSelectedTokens.add(getNumericClass(tc.kelas));
+                }
+            });
+
+            studentsToDisplay = studentsToDisplay.filter(student =>
+                gradesFromSelectedTokens.has(getNumericClass(student.class))
+            );
+
+            // tokensBeingViewed akan mencakup semua token FirebaseKey yang sesuai dengan token/kelas yang dipilih
+            tokensBeingViewed = tokenCache.filter(tc => tokenKeysForDisplay.includes(tc.key));
+
+        }
+
         const studentStatuses = new Map();
-        studentsToDisplay.forEach(student => {
-            const studentNumericClass = getNumericClass(student.class);
-            const relevantToken = tokensBeingViewed.find(t => getNumericClass(t.kelas) === studentNumericClass);
-            if (!relevantToken) {
-                studentStatuses.set(student.key, '-');
-                return;
-            }
-            const relevantTokenKey = relevantToken.key;
-            const accessData = tokenAccessStatus[relevantTokenKey]?.[student.id];
-            const submissionData = submittedExamsCache[relevantTokenKey]?.[student.id];
-            let status = 'Belum Login';
-            if (submissionData?.isSubmitted) { status = 'Sudah submit'; } 
-            else if (accessData?.isLoggedIn) { status = 'Sedang mengerjakan'; } 
-            else if (accessData?.accessCount > 0) { status = 'Belum Login (reset)'; }
-            studentStatuses.set(student.key, status);
-        });
+        if (isViewingSpecificExam) {
+            studentStatusHeader.style.display = ''; // Tampilkan kolom status
+            studentsToDisplay.forEach(student => {
+                let status = 'Belum Login'; // Default status
+                
+                // Cari di antara semua consolidated tokens yang relevan dengan kelas siswa
+                // dan cocok dengan salah satu token yang dipilih untuk ditampilkan
+                const studentNumericClass = getNumericClass(student.class);
+                const matchingConsolidatedTokens = Array.from(consolidatedTokensMap.values()).filter(ct => {
+                    // Pastikan token ini relevan dengan kelas siswa DAN
+                    // salah satu firebaseKey dari token terkonsolidasi ini ada di tokenKeysForDisplay
+                    return getNumericClass(ct.kelas) === studentNumericClass &&
+                           [...ct.firebaseKeys].some(fbKey => tokenKeysForDisplay.includes(fbKey));
+                });
+
+                if (matchingConsolidatedTokens.length > 0) {
+                    let isSubmittedAny = false;
+                    let isLoggedInAny = false;
+                    let hasAccessedAny = false;
+
+                    for (const relevantConsolidatedToken of matchingConsolidatedTokens) {
+                        for (const fbKey of relevantConsolidatedToken.firebaseKeys) {
+                            const accessData = tokenAccessStatus[fbKey]?.[student.id];
+                            const submissionData = submittedExamsCache[fbKey]?.[student.id];
+
+                            if (submissionData?.isSubmitted) { isSubmittedAny = true; break; } // Jika sudah submit, selesai
+                            if (accessData?.isLoggedIn) { isLoggedInAny = true; }
+                            if (accessData?.accessCount > 0) { hasAccessedAny = true; }
+                        }
+                        if (isSubmittedAny) break; // Jika sudah submit, tidak perlu memeriksa token lain
+                    }
+
+                    if (isSubmittedAny) { status = 'Sudah submit'; }
+                    else if (isLoggedInAny) { status = 'Sedang mengerjakan'; }
+                    else if (hasAccessedAny) { status = 'Belum Login (reset)'; }
+                    // else tetap 'Belum Login'
+                } else {
+                    status = 'Tidak Ada Ujian Relevan (-)';
+                }
+                studentStatuses.set(student.key, status);
+            });
+        }
+
 
         const searchId = document.getElementById('studentSearchId').value.trim();
         if (searchId) studentsToDisplay = studentsToDisplay.filter(student => student.id.includes(searchId));
 
         const searchName = document.getElementById('studentSearchName').value.trim().toUpperCase();
         if (searchName) studentsToDisplay = studentsToDisplay.filter(student => student.name.toUpperCase().includes(searchName));
-        
+
         const searchClass = document.getElementById('studentSearchClass').value.trim().toUpperCase();
         if (searchClass) studentsToDisplay = studentsToDisplay.filter(student => student.class.toUpperCase().includes(searchClass));
-        
-        const studentOverallStatusFilterValue = studentOverallStatusFilter.value;
-        if (studentOverallStatusFilterValue !== "ALL") {
-            studentsToDisplay = studentsToDisplay.filter(student => studentStatuses.get(student.key) === studentOverallStatusFilterValue);
-        }
-        
+
         filteredStudents = studentsToDisplay;
         const totalPages = Math.ceil(filteredStudents.length / selectedItemsPerPage);
         const startIndex = (currentPageStudent - 1) * selectedItemsPerPage;
@@ -1584,39 +1609,59 @@
         studentTableBody.innerHTML = '';
         studentsForPage.forEach((student, index) => {
             const row = document.createElement('tr');
-            const finalStatus = studentStatuses.get(student.key) || '(-)';
-            let statusColor = 'black';
-            switch(finalStatus) {
-                case 'Sudah submit': statusColor = '#27ae60'; break;
-                case 'Sedang mengerjakan': statusColor = '#f39c12'; break;
-                case 'Belum Login (reset)': statusColor = '#8e44ad'; break;
-                case 'Belum Login': statusColor = '#e74c3c'; break;
-                case '(-)': statusColor = '#7f8c8d'; break;
-            }
+            let statusCellHtml = '';
+            let actionButtonsHtml = `
+                <button class="icon-button edit" onclick="openEditStudentModal('${escapeHtmlAttributeForJsString(student.key)}')" title="Edit Data Siswa"><i class="fas fa-edit"></i></button>
+                <button class="icon-button delete" onclick="openDeleteStudentConfirmModal('${escapeHtmlAttributeForJsString(student.key)}')" title="Hapus Siswa"><i class="fas fa-trash-alt"></i></button>
+            `;
 
-            row.innerHTML = `
-                <td>${startIndex + index + 1}</td><td>${escapeHtmlAttributeForJsString(student.id)}</td><td>${escapeHtmlAttributeForJsString(student.name)}</td><td>${escapeHtmlAttributeForJsString(student.class)}</td><td>${padRoomNumber(student.room)}</td>
-                <td style="color: ${statusColor}; font-weight: bold;">${finalStatus}</td>
-                <td><div class="action-buttons-group">
-                    <button class="icon-button edit" onclick="openEditStudentModal('${escapeHtmlAttributeForJsString(student.key)}')" title="Edit Data Siswa"><i class="fas fa-edit"></i></button>
-                    <button class="icon-button delete" onclick="openDeleteStudentConfirmModal('${escapeHtmlAttributeForJsString(student.key)}')" title="Hapus Siswa"><i class="fas fa-trash-alt"></i></button>
+            if (isViewingSpecificExam) {
+                const finalStatus = studentStatuses.get(student.key) || '(-)';
+                let statusColor = 'black';
+                switch(finalStatus) {
+                    case 'Sudah submit': statusColor = '#27ae60'; break;
+                    case 'Sedang mengerjakan': statusColor = '#f39c12'; break;
+                    case 'Belum Login (reset)': statusColor = '#8e44ad'; break;
+                    case 'Belum Login': statusColor = '#e74c3c'; break;
+                    case 'Tidak Ada Ujian Relevan (-)': statusColor = '#7f8c8d'; break;
+                }
+                statusCellHtml = `<td style="color: ${statusColor}; font-weight: bold;">${finalStatus}</td>`;
+                actionButtonsHtml += `
                     <button class="icon-button reset" onclick="promptResetStudent('${escapeHtmlAttributeForJsString(student.key)}', '${escapeHtmlAttributeForJsString(student.id)}', '${escapeHtmlAttributeForJsString(student.name)}', '${escapeHtmlAttributeForJsString(student.class)}')" title="Reset Status Login"><i class="fas fa-redo"></i></button>
                     <button class="icon-button submit" onclick="promptSubmitAnswer('${escapeHtmlAttributeForJsString(student.key)}', '${escapeHtmlAttributeForJsString(student.id)}', '${escapeHtmlAttributeForJsString(student.name)}', '${escapeHtmlAttributeForJsString(student.class)}')" title="Kirim Jawaban Manual"><i class="fas fa-paper-plane"></i></button>
                     <button class="icon-button erase" onclick="promptDeleteAnswer('${escapeHtmlAttributeForJsString(student.key)}', '${escapeHtmlAttributeForJsString(student.id)}', '${escapeHtmlAttributeForJsString(student.name)}', '${escapeHtmlAttributeForJsString(student.class)}')" title="Hapus Semua Jawaban"><i class="fas fa-eraser"></i></button>
-                </div></td>`;
+                `;
+            } else {
+                statusCellHtml = '<td style="display: none;"></td>';
+            }
+
+            row.innerHTML = `
+                <td>${startIndex + index + 1}</td>
+                <td>${escapeHtmlAttributeForJsString(student.id)}</td>
+                <td>${escapeHtmlAttributeForJsString(student.name)}</td>
+                <td>${escapeHtmlAttributeForJsString(student.class)}</td>
+                <td>${padRoomNumber(student.room)}</td>
+                ${statusCellHtml}
+                <td><div class="action-buttons-group">${actionButtonsHtml}</div></td>`;
             studentTableBody.appendChild(row);
         });
-        renderPaginationControls(studentPaginationDiv, currentPageStudent, totalPages, 'renderStudentTableWithCurrentState');
+
+        const tableHeaders = document.querySelectorAll('#studentTable thead th');
+        if (isViewingSpecificExam) {
+            studentStatusHeader.style.display = '';
+            if (tableHeaders[5]) tableHeaders[5].style.display = ''; // Asumsi indeks 5 adalah kolom STATUS
+        } else {
+            studentStatusHeader.style.display = 'none';
+            if (tableHeaders[5]) tableHeaders[5].style.display = 'none'; // Sembunyikan kolom STATUS
+        }
+
+        renderPaginationControls(studentPaginationDiv, currentPageStudent, totalPages, 'renderStudentTableBasedOnSelection');
     };
     
     window.renderStudentTableWithCurrentState = (page) => {
-        const selectedValue = examStatusFilterDropdown.value;
-        if (selectedValue === "DEFAULT") {
-            renderStudentTable(currentDefaultTokenKeys, page);
-        } else {
-            renderStudentTable([selectedValue], page);
-        }
+        renderStudentTableBasedOnSelection(page);
     }
+
     function renderPaginationControls(container, currentPage, totalPages, renderFunction) {
         container.innerHTML = '';
         if (totalPages <= 1) return;
@@ -1636,7 +1681,7 @@
     }
     window.updateItemsPerPage = (value) => {
         selectedItemsPerPage = parseInt(value, 10);
-        handleStudentFilterChange();
+        renderStudentTableBasedOnSelection(); // Render ulang dengan item per halaman baru
         window.renderScoreTable(1);
     };
     async function handleAddStudent(e) {
@@ -1652,7 +1697,7 @@
         const targetDb = getDbForClass(studentClass);
         if (!targetDb || Array.isArray(targetDb)) return studentErrorMsg.innerText = "Konfigurasi Firebase belum lengkap untuk rombel ini.";
         if (!/^\d{3,}$/.test(studentId)) return studentErrorMsg.innerText = "ID Siswa harus berupa angka!";
-        if (studentCache.some(s => s.id === studentId && s.firebaseGroup === rombelToDbMap[studentClass])) return studentErrorMsg.innerText = "ID Siswa sudah ada di kelas tersebut.";
+        if (studentCache.some(s => s.id === paddedId && s.firebaseGroup === rombelToDbMap[studentClass])) return studentErrorMsg.innerText = "ID Siswa sudah ada di kelas tersebut.";
         
         try {
             await push(ref(targetDb, 'students'), { id: studentId, name: studentName, class: studentClass, room: studentRoom, isLoggedIn: false });
@@ -1727,7 +1772,7 @@
     window.closeEmptyStudentsModal = () => document.getElementById('emptyStudentsModal').style.display = 'none';
     window.promptLogout = () => document.getElementById('logoutConfirmModal').style.display = 'flex';
     window.closeLogoutModal = () => document.getElementById('logoutConfirmModal').style.display = 'none';
-    window.confirmLogout = () => { localStorage.removeItem('isAdminLoggedIn'); location.reload(); };
+    window.confirmLogout = () => { localStorage.removeItem('isAdminLoggedIn'); localStorage.removeItem('lastSelectedTokens'); location.reload(); }; // Hapus juga token terakhir saat logout
     window.closeResetStudentModal = () => { document.getElementById('resetStudentModal').style.display = 'none'; studentKeyForAction = null; };
     window.closeSubmitAnswerModal = () => { document.getElementById('submitAnswerModal').style.display = 'none'; studentKeyForAction = null; };
     window.closeDeleteAnswerModal = () => { document.getElementById('deleteAnswerModal').style.display = 'none'; studentKeyForAction = null; };
@@ -2021,23 +2066,6 @@
     };
     window.closeEmptyTokensModal = () => document.getElementById('emptyTokensModal').style.display = 'none';
     
-    function populateExamStatusFilter(tokensToPopulate) {
-        const selectedValue = examStatusFilterDropdown.value;
-        tokensToPopulate
-            .sort((a, b) => (a.subject.localeCompare(b.subject) || a.kelas.localeCompare(b.kelas)))
-            .forEach(token => {
-                const option = document.createElement('option');
-                option.value = Array.from(token.firebaseKeys)[0];
-                option.innerText = `${token.token} (${token.subject} Kls ${token.kelas})`;
-                examStatusFilterDropdown.appendChild(option);
-            });
-        if ([...examStatusFilterDropdown.options].some(opt => opt.value === selectedValue)) {
-            examStatusFilterDropdown.value = selectedValue;
-        } else {
-            examStatusFilterDropdown.value = 'DEFAULT';
-        }
-    }
-    
     function generateAbbreviation(subjectName) {
         if (!subjectName) return 'N/A';
         const upperSubject = subjectName.toUpperCase();
@@ -2302,9 +2330,28 @@
         `;
     }
     window.navigateToStudentManagement = (kelas) => {
+        // Ketika mengelola peserta dari dashboard, set pilihan token untuk kelas tersebut
+        const relevantTokensForGrade = Array.from(consolidatedTokensMap.values()).filter(t => getNumericClass(t.kelas) === kelas);
+        if (relevantTokensForGrade.length > 0) {
+            // Jika ada token aktif, pilih token aktif terdekat dengan waktu saat ini
+            const now = new Date();
+            const activeTokens = relevantTokensForGrade.filter(t => t.isActive || t.isForceActive);
+            activeTokens.sort((a, b) => new Date(b.startTime) - new Date(a.startTime)); // Urutkan berdasarkan waktu mulai (terbaru pertama)
+            const bestToken = activeTokens.find(t => new Date(t.startTime) <= now) || activeTokens[0]; // Ambil yang aktif jika tersedia, kalau tidak yang pertama
+            
+            if (bestToken) {
+                lastSelectedTokens[kelas] = `${bestToken.token}_${bestToken.kelas}`;
+            } else {
+                lastSelectedTokens[kelas] = 'DEFAULT';
+            }
+            localStorage.setItem('lastSelectedTokens', JSON.stringify(lastSelectedTokens));
+        } else {
+            lastSelectedTokens[kelas] = 'DEFAULT';
+            localStorage.setItem('lastSelectedTokens', JSON.stringify(lastSelectedTokens));
+        }
         showSection('studentSection');
         document.getElementById('studentSearchClass').value = kelas;
-        handleStudentFilterChange();
+        renderStudentTableBasedOnSelection();
     }
     
     window.performBackup = async () => {
@@ -2452,6 +2499,128 @@
             restoreFileError.innerText = 'Gagal membaca file.';
         };
         reader.readAsText(file);
+    };
+
+    // Fungsi baru untuk memuat pilihan token terakhir dari localStorage
+    function loadLastSelectedTokens() {
+        const storedTokens = localStorage.getItem('lastSelectedTokens');
+        if (storedTokens) {
+            lastSelectedTokens = JSON.parse(storedTokens);
+        } else {
+            // Jika tidak ada token yang disimpan, atur default ke token aktif terdekat
+            // Ini harus dilakukan setelah consolidatedTokensMap diisi
+            const now = new Date();
+            const grades = ['7', '8', '9'];
+
+            grades.forEach(grade => {
+                const activeTokensForGrade = Array.from(consolidatedTokensMap.values()).filter(t =>
+                    getNumericClass(t.kelas) === grade && (t.isActive || t.isForceActive)
+                );
+
+                if (activeTokensForGrade.length > 0) {
+                    activeTokensForGrade.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+                    const bestToken = activeTokensForGrade.find(t => new Date(t.startTime) <= now) || activeTokensForGrade[0];
+                    if (bestToken) {
+                        lastSelectedTokens[grade] = `${bestToken.token}_${bestToken.kelas}`;
+                    }
+                } else {
+                    lastSelectedTokens[grade] = 'DEFAULT';
+                }
+            });
+            localStorage.setItem('lastSelectedTokens', JSON.stringify(lastSelectedTokens));
+        }
+    }
+
+    // Fungsi baru untuk mengisi dropdown pemilihan ujian di menu "Status Ujian"
+    function populateExamSelectionDropdowns() {
+        const gradeDropdowns = {
+            '7': grade7TokenSelect,
+            '8': grade8TokenSelect,
+            '9': grade9TokenSelect
+        };
+
+        // Buat salinan consolidatedTokens dari map untuk diolah
+        let allConsolidatedTokens = Array.from(consolidatedTokensMap.values());
+
+        for (const grade in gradeDropdowns) {
+            const dropdown = gradeDropdowns[grade];
+            dropdown.innerHTML = '<option value="DEFAULT">[Kosong]</option>'; // Opsi default
+
+            // Filter token yang sudah terkonsolidasi untuk grade yang sesuai
+            const tokensForGrade = allConsolidatedTokens.filter(t => getNumericClass(t.kelas) === grade);
+
+            // Urutkan token: yang aktif paling atas, lalu berdasarkan subjek dan kelas
+            tokensForGrade.sort((a, b) => {
+                const isActiveA = a.isActive || a.isForceActive;
+                const isActiveB = b.isActive || b.isForceActive;
+
+                if (isActiveA && !isActiveB) return -1; // A aktif, B tidak -> A di atas
+                if (!isActiveA && isActiveB) return 1;  // A tidak aktif, B aktif -> B di atas
+
+                // Jika status keaktifan sama, urutkan berdasarkan subjek, lalu kelas
+                return a.subject.localeCompare(b.subject) || a.kelas.localeCompare(b.kelas);
+            });
+
+            // Gunakan Set untuk melacak kombinasi token+kelas yang sudah ditambahkan
+            const addedTokens = new Set(); 
+
+            tokensForGrade.forEach(token => {
+                // Gunakan kombinasi token + kelas sebagai value yang unik dan logis
+                const tokenIdentifier = `${token.token}_${token.kelas}`;
+
+                // Hanya tambahkan jika belum ada di Set
+                if (!addedTokens.has(tokenIdentifier)) {
+                    const option = document.createElement('option');
+                    option.value = tokenIdentifier; // Nilai yang akan disimpan/dibaca
+                    option.innerText = `${token.subject} (Kls ${token.kelas}) - ${token.token} ${token.isActive || token.isForceActive ? '(Aktif)' : ''}`;
+                    dropdown.appendChild(option);
+                    addedTokens.add(tokenIdentifier);
+                }
+            });
+
+            // Set pilihan dropdown berdasarkan lastSelectedTokens
+            if (lastSelectedTokens[grade] && Array.from(dropdown.options).some(opt => opt.value === lastSelectedTokens[grade])) {
+                dropdown.value = lastSelectedTokens[grade];
+            } else {
+                dropdown.value = 'DEFAULT';
+            }
+        }
+    }
+
+    // Fungsi baru untuk menyimpan pilihan token dan mengarahkan ke menu peserta
+    window.saveSelectedExamTokens = () => {
+        lastSelectedTokens['7'] = grade7TokenSelect.value;
+        lastSelectedTokens['8'] = grade8TokenSelect.value;
+        lastSelectedTokens['9'] = grade9TokenSelect.value;
+        localStorage.setItem('lastSelectedTokens', JSON.stringify(lastSelectedTokens)); // Simpan ke localStorage
+
+        showNotification('Pilihan token ujian berhasil disimpan.');
+        window.showSection('studentSection'); // Navigasi ke menu peserta
+    };
+
+    // Fungsi baru untuk merender tabel peserta berdasarkan token yang dipilih dari lastSelectedTokens
+    window.renderStudentTableBasedOnSelection = (page = 1) => {
+        const allSelectedTokenFirebaseKeys = [];
+
+        for (const grade in lastSelectedTokens) {
+            const selectedTokenIdentifier = lastSelectedTokens[grade]; // Format: TOKEN_KELAS atau DEFAULT
+            if (selectedTokenIdentifier !== 'DEFAULT') {
+                const [tokenValue, kelasValue] = selectedTokenIdentifier.split('_');
+
+                // Cari token terkonsolidasi yang cocok dengan identifier ini
+                const matchingConsolidatedToken = Array.from(consolidatedTokensMap.values()).find(t =>
+                    t.token === tokenValue && t.kelas === kelasValue
+                );
+
+                if (matchingConsolidatedToken) {
+                    // Tambahkan SEMUA firebaseKeys yang terkait dengan token terkonsolidasi ini
+                    allSelectedTokenFirebaseKeys.push(...Array.from(matchingConsolidatedToken.firebaseKeys));
+                }
+            }
+        }
+        // Jika tidak ada token yang dipilih, allSelectedTokenFirebaseKeys akan kosong,
+        // yang akan menyebabkan renderStudentTable menampilkan tabel dasar.
+        renderStudentTable(allSelectedTokenFirebaseKeys, page);
     };
   </script>
 </body>
