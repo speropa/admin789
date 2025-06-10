@@ -1564,7 +1564,9 @@
         const activeTokens = Array.from(consolidatedTokensMap.values()).filter(t => t.isActive || t.isForceActive);
         
         // Populate the filter dropdown first, regardless of active tokens
-        populateExamStatusFilter(activeTokens);
+        // MODIFICATION START: Populate with ALL tokens, not just active ones.
+        populateExamStatusFilter(Array.from(consolidatedTokensMap.values()));
+        // MODIFICATION END
 
         if (activeTokens.length === 0) {
             examStatusFilterDropdown.value = "DEFAULT";
@@ -2125,16 +2127,20 @@
     
     function populateExamStatusFilter(tokensToPopulate) {
         const selectedValue = examStatusFilterDropdown.value;
+        // The first option for the filter dropdown.
         examStatusFilterDropdown.innerHTML = '<option value="DEFAULT">Tampilan Default (Aktif)</option>';
         tokensToPopulate
+            // Sort tokens for consistent display in the dropdown.
             .sort((a, b) => (a.subject.localeCompare(b.subject) || a.kelas.localeCompare(b.kelas)))
             .forEach(token => {
                 const option = document.createElement('option');
+                // Use the Firebase key for the option value, and combine token, subject, and class for display text.
                 option.value = Array.from(token.firebaseKeys)[0];
                 option.innerText = `${token.token} (${token.subject} Kls ${token.kelas})`;
                 examStatusFilterDropdown.appendChild(option);
             });
 
+        // Retain the previously selected value if it still exists in the options, otherwise default to "DEFAULT".
         if ([...examStatusFilterDropdown.options].some(opt => opt.value === selectedValue)) {
             examStatusFilterDropdown.value = selectedValue;
         } else {
