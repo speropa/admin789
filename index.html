@@ -758,7 +758,7 @@
                 <input type="text" id="studentSearchId" placeholder="Cari ID..." style="max-width: 150px;"/>
                 <input type="text" id="studentSearchName" placeholder="Cari Nama..." style="max-width: 200px;" />
                 <input type="text" id="studentSearchClass" placeholder="Cari Kelas..." style="max-width: 150px;" />
-                <select id="examStatusFilter">
+                <select id="examStatusFilter" onchange="handleStudentFilterChange()">
                     <option value="">PILIH TOKEN UJIAN</option>
                 </select>
                 <select id="studentOverallStatusFilter" onchange="window.renderStudentTable(1)">
@@ -780,7 +780,10 @@
                 </select>
             </div>
         </div>
-        <div class="table-responsive">
+        <p id="studentTableMessage" style="text-align: center; color: #555; font-style: italic; margin: 20px 0; display: none;">
+            Pilih token ujian untuk menampilkan daftar peserta.
+        </p>
+        <div class="table-responsive" id="studentTableContainer">
           <table id="studentTable">
             <thead>
               <tr>
@@ -1092,6 +1095,8 @@
     const progressCardsContainer = document.getElementById('progressCardsContainer');
     const tokenTableBody = document.getElementById('tokenTableBody');
     const studentTableBody = document.getElementById('studentTableBody');
+    const studentTableContainer = document.getElementById('studentTableContainer');
+    const studentTableMessage = document.getElementById('studentTableMessage');
     const examStatusFilterDropdown = document.getElementById('examStatusFilter');
     const studentOverallStatusFilter = document.getElementById('studentOverallStatusFilter');
     const itemsPerPageSelect = document.getElementById('itemsPerPageSelect');
@@ -1152,7 +1157,6 @@
         document.getElementById('studentSearchId').addEventListener('keyup', () => window.renderStudentTable(1));
         document.getElementById('studentSearchName').addEventListener('keyup', () => window.renderStudentTable(1));
         document.getElementById('studentSearchClass').addEventListener('keyup', () => window.renderStudentTable(1));
-        document.getElementById('examStatusFilter').addEventListener('change', () => window.renderStudentTable(1));
         document.getElementById('addTokenForm').addEventListener('submit', handleAddToken);
         document.getElementById('modalForm').addEventListener('submit', handleEditToken);
         document.getElementById('addStudentForm').addEventListener('submit', handleAddStudent);
@@ -1195,14 +1199,10 @@
         } else if (sectionId === 'rulesSection') {
              updateSetlokasiStatusDisplay(); renderLockSettingsTable(); 
         } else if (sectionId === 'studentSection') { 
-            studentOverallStatusFilter.value = 'ALL'; 
-            window.renderStudentTable(1); 
+            initializeStudentSectionView();
         } else if (sectionId === 'scoreSection') {
             window.currentScoreGradeFilter = 'ALL';
             resetScoreTable();
-        } else if (sectionId === 'backupRestoreSection') {
-            // No specific render function needed for this section yet,
-            // as its content is mostly static buttons.
         }
     };
 
@@ -1543,70 +1543,83 @@
                         const nameB = String(b.name || '').toUpperCase();
                         return nameA.localeCompare(nameB);
                     });
-                    window.renderStudentTable(currentPageStudent);
-                    resetScoreTable();
+                    if (document.getElementById('studentSection').style.display === 'block') {
+                         initializeStudentSectionView();
+                    }
+                    if (document.getElementById('scoreSection').style.display === 'block') {
+                        resetScoreTable();
+                    }
                 }, (error) => console.error(`Error memuat siswa dari grup ${dbName}:`, error));
             }
         });
     }
+
+    function initializeStudentSectionView() {
+        const activeTokens = Array.from(consolidatedTokensMap.values()).filter(t => t.isActive || t.isForceActive);
+        if (activeTokens.length > 0) {
+            const firstActiveKey = activeTokens[0].firebaseKeys.values().next().value;
+            examStatusFilterDropdown.value = firstActiveKey;
+        } else {
+            examStatusFilterDropdown.value = "";
+        }
+        renderStudentTable(1);
+    }
+    
+    window.handleStudentFilterChange = () => {
+        const selectedValue = examStatusFilterDropdown.value;
+        if (selectedValue === "") {
+            initializeStudentSectionView();
+        } else {
+            renderStudentTable(1);
+        }
+    };
     
     window.renderStudentTable = (page = 1) => {
         currentPageStudent = page;
+        const examStatusFilterTokenKey = examStatusFilterDropdown.value;
+
+        if (!examStatusFilterTokenKey) {
+            studentTableMessage.style.display = 'block';
+            studentTableContainer.style.display = 'none';
+            studentPaginationDiv.style.display = 'none';
+            studentTableBody.innerHTML = '';
+            return;
+        }
+        studentTableMessage.style.display = 'none';
+        studentTableContainer.style.display = 'block';
+        studentPaginationDiv.style.display = 'flex';
+        
         studentTableBody.innerHTML = '';
         let studentsToDisplay = [...studentCache]; 
 
-        const examStatusFilterTokenKey = document.getElementById('examStatusFilter').value;
-        const studentOverallStatusFilterValue = document.getElementById('studentOverallStatusFilter').value;
+        const studentOverallStatusFilterValue = studentOverallStatusFilter.value;
         
         const studentStatuses = new Map();
 
         studentsToDisplay.forEach(student => {
             const studentNumericClass = getNumericClass(student.class);
-            const applicableTokensForStudentClass = tokenCache.filter(token => getNumericClass(token.kelas) === studentNumericClass);
+            const tokenBeingViewed = tokenCache.find(t => t.key === examStatusFilterTokenKey);
 
-            let relevantTokensInFilterContext; 
-            if (examStatusFilterTokenKey) {
-                const selectedToken = applicableTokensForStudentClass.find(token => token.key === examStatusFilterTokenKey);
-                relevantTokensInFilterContext = selectedToken ? [selectedToken] : [];
-            } else {
-                relevantTokensInFilterContext = applicableTokensForStudentClass;
+            if (!tokenBeingViewed || getNumericClass(tokenBeingViewed.kelas) !== studentNumericClass) {
+                studentStatuses.set(student.key, 'irrelevant');
+                return;
             }
+
+            const accessData = tokenAccessStatus[examStatusFilterTokenKey]?.[student.id];
+            const submissionData = submittedExamsCache[examStatusFilterTokenKey]?.[student.id];
             
-            let hasSubmittedAny = false;
-            let isLoggedInCurrently = false;
-            let hasAccessedBefore = false;
-            let applicableTokensExist = relevantTokensInFilterContext.length > 0;
-
-            for (const token of relevantTokensInFilterContext) {
-                const accessData = tokenAccessStatus[token.key]?.[student.id];
-                const submissionData = submittedExamsCache[token.key]?.[student.id];
-
-                if (submissionData?.isSubmitted) {
-                    hasSubmittedAny = true;
-                    break;
-                }
-                if (accessData?.isLoggedIn) {
-                    isLoggedInCurrently = true;
-                }
-                if (accessData?.accessCount > 0) {
-                    hasAccessedBefore = true;
-                }
-            }
-
-            let status = '(-)'; 
-
-            if (hasSubmittedAny) {
+            let status = 'Belum Login';
+            if (submissionData?.isSubmitted) {
                 status = 'Sudah submit';
-            } else if (isLoggedInCurrently) {
+            } else if (accessData?.isLoggedIn) {
                 status = 'Sedang mengerjakan';
-            } else if (hasAccessedBefore) {
+            } else if (accessData?.accessCount > 0) {
                 status = 'Belum Login (reset)';
-            } else if (applicableTokensExist) {
-                status = 'Belum Login';
             }
-
             studentStatuses.set(student.key, status);
         });
+
+        studentsToDisplay = studentsToDisplay.filter(student => studentStatuses.get(student.key) !== 'irrelevant');
 
         const searchId = document.getElementById('studentSearchId').value.trim();
         if (searchId) studentsToDisplay = studentsToDisplay.filter(student => student.id.includes(searchId));
@@ -1829,10 +1842,13 @@
                     const tokenInfo = Array.from(consolidatedTokensMap.values()).find(t => t.subject === subject && getNumericClass(t.kelas) === getNumericClass(student.class));
                     if(tokenInfo){
                         for(const fbKey of Array.from(tokenInfo.firebaseKeys)){
-                             const answerData = studentAnswersCache[fbKey] && studentAnswersCache[fbKey][student.id];
-                             if (answerData) {
-                                 score = calculateScore(answerData.answers, tokenInfo.answerKey);
-                                 break;
+                             const isSubmitted = submittedExamsCache[fbKey]?.[student.id]?.isSubmitted;
+                             if(isSubmitted) {
+                                 const answerData = studentAnswersCache[fbKey]?.[student.id];
+                                 if (answerData) {
+                                     score = calculateScore(answerData.answers, tokenInfo.answerKey);
+                                     break;
+                                 }
                              }
                         }
                     }
@@ -2137,8 +2153,14 @@
                 const tokenInfo = Array.from(consolidatedTokensMap.values()).find(t => t.subject === subject && getNumericClass(t.kelas) === getNumericClass(student.class));
                 if (tokenInfo) {
                     for (const fbKey of Array.from(tokenInfo.firebaseKeys)) {
-                         const answerData = studentAnswersCache[fbKey]?.[student.id];
-                         if (answerData) { score = calculateScore(answerData.answers, tokenInfo.answerKey); break; }
+                         const isSubmitted = submittedExamsCache[fbKey]?.[student.id]?.isSubmitted;
+                         if (isSubmitted) {
+                             const answerData = studentAnswersCache[fbKey]?.[student.id];
+                             if (answerData) {
+                                 score = calculateScore(answerData.answers, tokenInfo.answerKey);
+                                 break;
+                             }
+                         }
                     }
                 }
                 rowContent += `<td>${score}</td>`;
@@ -2213,8 +2235,18 @@
     function loadLockSettings() { onValue(ref(dbInstances['7ABC'], 'lock_settings'), (snapshot) => { const settings = snapshot.val(); if (settings) { isLockEnabledAdmin = settings.isLockEnabled || false; currentLockKeyAdmin = settings.lockKey || "KUNCI"; toleranceLimitAdmin = 3; } renderLockSettingsTable(); }, (error) => console.error("Error memuat pengaturan kunci:", error)); }
     function periksaAndUpdateStatusToken() { const now = new Date(); tokenCache.forEach(tokenData => { const newIsActive = tokenData.isForceActive ? true : (now >= new Date(tokenData.startTime) && now < new Date(tokenData.endTime)); if (tokenData.isActive !== newIsActive) { const targetDb = dbInstances[tokenData.firebaseGroup]; if (targetDb) { update(ref(targetDb, 'tokens/' + tokenData.key), { isActive: newIsActive }).catch(e => console.error(e)); } } }); }
     function loadTokenAccessStatus() { Object.keys(dbInstances).forEach(dbName => { onValue(ref(dbInstances[dbName], 'exam_access_status'), (snapshot) => { Object.assign(tokenAccessStatus, snapshot.val() || {}); updateDashboard(); }); }); }
-    function loadSubmittedExamsStatus() { Object.keys(dbInstances).forEach(dbName => { onValue(ref(dbInstances[dbName], 'submitted_exams'), (snapshot) => { Object.assign(submittedExamsCache, snapshot.val() || {}); updateDashboard(); }); }); }
-    function loadStudentAnswers() { Object.keys(dbInstances).forEach(dbName => { onValue(ref(dbInstances[dbName], 'student_answers'), (snapshot) => { Object.assign(studentAnswersCache, snapshot.val() || {}); if (window.currentScoreGradeFilter !== 'ALL') { window.renderScoreTable(currentPageScore); } }); }); }
+    function loadSubmittedExamsStatus() {
+        Object.keys(dbInstances).forEach(dbName => {
+            onValue(ref(dbInstances[dbName], 'submitted_exams'), (snapshot) => {
+                Object.assign(submittedExamsCache, snapshot.val() || {});
+                updateDashboard();
+                if (document.getElementById('scoreSection').style.display === 'block') {
+                    window.renderScoreTable(currentPageScore);
+                }
+            });
+        });
+    }
+    function loadStudentAnswers() { Object.keys(dbInstances).forEach(dbName => { onValue(ref(dbInstances[dbName], 'student_answers'), (snapshot) => { Object.assign(studentAnswersCache, snapshot.val() || {}); if (window.currentScoreGradeFilter !== 'ALL' && document.getElementById('scoreSection').style.display === 'block') { window.renderScoreTable(currentPageScore); } }); }); }
     function updateSetlokasiStatusDisplay() { locationSettingsTableBody.innerHTML = ''; const row = document.createElement('tr'); const statusText = isLocationEnabledAdmin ? 'ON' : 'OFF'; const statusColor = isLocationEnabledAdmin ? 'green' : 'red'; row.innerHTML = `<td><a href="http://maps.google.com/maps?q=${escapeHtmlAttributeForJsString(defaultLocationCoordinate)}" target="_blank">${defaultLocationCoordinate}</a></td><td>${allowedRadiusMeterAdmin}m</td><td style="color: ${statusColor}; font-weight: bold;">${statusText}</td><td><button class="icon-button" onclick="openSetlokasiModal()" title="Atur Lokasi"><i class="fas fa-map-marker-alt"></i></button></td>`; locationSettingsTableBody.appendChild(row); }
     function renderLockSettingsTable() { lockSettingsTableBody.innerHTML = ''; const row = document.createElement('tr'); const statusText = isLockEnabledAdmin ? 'ON' : 'OFF'; const statusColor = isLockEnabledAdmin ? 'green' : 'red'; row.innerHTML = `<td>${escapeHtmlAttributeForJsString(currentLockKeyAdmin)}</td><td>${toleranceLimitAdmin}</td><td style="color: ${statusColor}; font-weight: bold;">${statusText}</td><td><button class="icon-button edit" onclick="openSetLockModal()" title="Atur Kunci"><i class="fas fa-edit"></i></button></td>`; lockSettingsTableBody.appendChild(row); }
     window.openSetlokasiModal = () => document.getElementById('setlokasiModal').style.display = 'flex'; window.closeSetlokasiModal = () => document.getElementById('setlokasiModal').style.display = 'none'; window.openGantiRadiusModal = () => { document.getElementById('gantiRadiusModal').style.display = 'flex'; document.getElementById('radiusMeter').value = allowedRadiusMeterAdmin; closeSetlokasiModal(); }; window.closeGantiRadiusModal = () => document.getElementById('gantiRadiusModal').style.display = 'none'; window.aktifkanLokasi = async () => { await Promise.all(allSetlokasiRefs.map(dbRef => update(dbRef, { isLocationEnabled: true }))); showNotification('Fitur lokasi berhasil diaktifkan.'); closeSetlokasiModal(); }; window.nonaktifkanLokasi = async () => { await Promise.all(allSetlokasiRefs.map(dbRef => update(dbRef, { isLocationEnabled: false }))); showNotification('Fitur lokasi berhasil dinonaktifkan.'); closeSetlokasiModal(); }; window.gantiRadiusDanAktifkan = async () => { const radiusMeter = parseInt(document.getElementById('radiusMeter').value); if (isNaN(radiusMeter) || radiusMeter <= 0) return showNotification('Masukkan radius yang valid.'); await Promise.all(allSetlokasiRefs.map(dbRef => update(dbRef, { allowedRadiusKm: radiusMeter / 1000, isLocationEnabled: true }))); showNotification(`Radius lokasi diubah menjadi ${radiusMeter} meter dan diaktifkan.`); closeGantiRadiusModal(); }; window.openSetLockModal = () => document.getElementById('setLockModal').style.display = 'flex'; window.closeSetLockModal = () => document.getElementById('setLockModal').style.display = 'none'; window.openGantiKunciBatasModal = () => { document.getElementById('gantiKunciBatasModal').style.display = 'flex'; document.getElementById('lockKeyInput').value = currentLockKeyAdmin; document.getElementById('toleranceLimitInput').value = toleranceLimitAdmin; closeSetLockModal(); }; window.closeGantiKunciBatasModal = () => document.getElementById('gantiKunciBatasModal').style.display = 'none'; window.aktifkanKunci = async () => { await Promise.all(allLockSettingsRefs.map(dbRef => update(dbRef, { isLockEnabled: true }))); showNotification('Fitur kunci berhasil diaktifkan.'); closeSetLockModal(); }; window.nonaktifkanKunci = async () => { await Promise.all(allLockSettingsRefs.map(dbRef => update(dbRef, { isLocationEnabled: false }))); showNotification('Fitur kunci berhasil dinonaktifkan.'); closeSetLockModal(); }; window.gantiKunciDanBatas = async () => { const newLockKey = document.getElementById('lockKeyInput').value.trim().toUpperCase(); const newToleranceLimit = parseInt(document.getElementById('toleranceLimitInput').value); if (!newLockKey || isNaN(newToleranceLimit) || newToleranceLimit < 0) return showNotification('Data tidak valid'); await Promise.all(allLockSettingsRefs.map(dbRef => update(dbRef, { lockKey: newLockKey, toleranceLimit: newToleranceLimit, isLockEnabled: true }))); showNotification(`Kunci diubah menjadi '${newLockKey}' dan batas toleransi menjadi ${newToleranceLimit}.`); closeGantiKunciBatasModal(); };
@@ -2315,7 +2347,7 @@
     window.navigateToStudentManagement = (kelas) => {
         showSection('studentSection');
         document.getElementById('studentSearchClass').value = kelas;
-        renderStudentTable(1);
+        initializeStudentSectionView();
     }
     
     window.performBackup = async () => {
