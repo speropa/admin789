@@ -759,9 +759,9 @@
                 <input type="text" id="studentSearchName" placeholder="Cari Nama..." style="max-width: 200px;" />
                 <input type="text" id="studentSearchClass" placeholder="Cari Kelas..." style="max-width: 150px;" />
                 <select id="examStatusFilter" onchange="handleStudentFilterChange()">
-                    <option value="">PILIH TOKEN UJIAN</option>
+                    <!-- Options will be populated by script -->
                 </select>
-                <select id="studentOverallStatusFilter" onchange="window.renderStudentTable(1)">
+                <select id="studentOverallStatusFilter" onchange="handleStudentFilterChange()">
                     <option value="ALL" selected>SEMUA STATUS</option>
                     <option value="Sudah submit">Sudah Submit</option>
                     <option value="Sedang mengerjakan">Sedang Mengerjakan</option>
@@ -781,7 +781,7 @@
             </div>
         </div>
         <p id="studentTableMessage" style="text-align: center; color: #555; font-style: italic; margin: 20px 0; display: none;">
-            Pilih token ujian untuk menampilkan daftar peserta.
+            Tidak ada token ujian yang aktif.
         </p>
         <div class="table-responsive" id="studentTableContainer">
           <table id="studentTable">
@@ -1154,9 +1154,9 @@
         document.getElementById('tokenSearchSubject').addEventListener('keyup', renderTokenTable);
         document.getElementById('scoreSearchName').addEventListener('keyup', () => window.renderScoreTable(1));
         document.getElementById('scoreSearchClass').addEventListener('keyup', () => window.renderScoreTable(1));
-        document.getElementById('studentSearchId').addEventListener('keyup', () => window.renderStudentTable(1));
-        document.getElementById('studentSearchName').addEventListener('keyup', () => window.renderStudentTable(1));
-        document.getElementById('studentSearchClass').addEventListener('keyup', () => window.renderStudentTable(1));
+        document.getElementById('studentSearchId').addEventListener('keyup', handleStudentFilterChange);
+        document.getElementById('studentSearchName').addEventListener('keyup', handleStudentFilterChange);
+        document.getElementById('studentSearchClass').addEventListener('keyup', handleStudentFilterChange);
         document.getElementById('addTokenForm').addEventListener('submit', handleAddToken);
         document.getElementById('modalForm').addEventListener('submit', handleEditToken);
         document.getElementById('addStudentForm').addEventListener('submit', handleAddStudent);
@@ -1281,7 +1281,11 @@
             row.innerHTML = `<td>${index + 1}</td><td class="mapel-cell"><div class="subject-display">${escapeHtmlAttributeForJsString(data.subject)}</div><a href="${escapeHtmlAttributeForJsString(data.googleDriveUrl)}" target="_blank" class="login-link link-display">Link Soal</a></td><td>${escapeHtmlAttributeForJsString(data.kelas)}</td><td>${tokenDisplayHtml}</td><td class="time-cell">${startTimeFormatted}</td><td class="time-cell">${endTimeFormatted}</td><td class="duration-cell">${durationDisplay}</td><td>${progresHtml}</td><td><div class="action-buttons-group"><button class="icon-button edit" onclick="editTokenConsolidated('${escapeHtmlAttributeForJsString(data.token)}', '${escapeHtmlAttributeForJsString(data.kelas)}')" title="Edit Token"><i class="fas fa-edit"></i></button><button class="icon-button delete" onclick="promptDeleteConsolidated('${escapeHtmlAttributeForJsString(data.token)}', '${escapeHtmlAttributeForJsString(data.kelas)}')" title="Hapus Token"><i class="fas fa-trash-alt"></i></button></div></td>`;
             tokenTableBody.appendChild(row);
         });
-        populateExamStatusFilter();
+        
+        // This is called just in case the active tokens change, so the student view might need an update
+        if(document.getElementById('studentSection').style.display === 'block') {
+            initializeStudentSectionView();
+        }
     }
     
     window.promptToggleForceActive = (token, kelas, isCurrentlyActive) => {
@@ -1555,71 +1559,89 @@
     }
 
     function initializeStudentSectionView() {
+        const now = new Date();
         const activeTokens = Array.from(consolidatedTokensMap.values()).filter(t => t.isActive || t.isForceActive);
-        if (activeTokens.length > 0) {
-            const firstActiveKey = activeTokens[0].firebaseKeys.values().next().value;
-            examStatusFilterDropdown.value = firstActiveKey;
-        } else {
-            examStatusFilterDropdown.value = "";
+        populateExamStatusFilter(activeTokens);
+
+        if (activeTokens.length === 0) {
+            examStatusFilterDropdown.value = "DEFAULT";
+            handleStudentFilterChange();
+            return;
         }
-        renderStudentTable(1);
+        
+        const activeTokensByGrade = activeTokens.reduce((acc, token) => {
+            const grade = getNumericClass(token.kelas);
+            if (!acc[grade]) { acc[grade] = []; }
+            acc[grade].push(token);
+            return acc;
+        }, {});
+        
+        const prioritizedTokens = [];
+        for (const grade in activeTokensByGrade) {
+            let tokensForGrade = activeTokensByGrade[grade];
+            if (tokensForGrade.length === 1) {
+                prioritizedTokens.push(tokensForGrade[0]);
+            } else {
+                tokensForGrade.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+                const bestToken = tokensForGrade.find(t => new Date(t.startTime) <= now);
+                if (bestToken) {
+                    prioritizedTokens.push(bestToken);
+                } else {
+                    prioritizedTokens.push(tokensForGrade[tokensForGrade.length - 1]);
+                }
+            }
+        }
+        
+        examStatusFilterDropdown.value = "DEFAULT";
+        const defaultTokenKeys = prioritizedTokens.flatMap(t => Array.from(t.firebaseKeys));
+        renderStudentTable(defaultTokenKeys, 1);
     }
     
     window.handleStudentFilterChange = () => {
         const selectedValue = examStatusFilterDropdown.value;
-        if (selectedValue === "") {
+        if (selectedValue === "DEFAULT") {
             initializeStudentSectionView();
         } else {
-            renderStudentTable(1);
+            renderStudentTable([selectedValue], 1);
         }
     };
     
-    window.renderStudentTable = (page = 1) => {
+    window.renderStudentTable = (tokenKeys, page = 1) => {
         currentPageStudent = page;
-        const examStatusFilterTokenKey = examStatusFilterDropdown.value;
 
-        if (!examStatusFilterTokenKey) {
+        if (!tokenKeys || tokenKeys.length === 0) {
             studentTableMessage.style.display = 'block';
             studentTableContainer.style.display = 'none';
             studentPaginationDiv.style.display = 'none';
             studentTableBody.innerHTML = '';
             return;
         }
+
         studentTableMessage.style.display = 'none';
         studentTableContainer.style.display = 'block';
         studentPaginationDiv.style.display = 'flex';
         
-        studentTableBody.innerHTML = '';
-        let studentsToDisplay = [...studentCache]; 
-
-        const studentOverallStatusFilterValue = studentOverallStatusFilter.value;
+        const tokensBeingViewed = tokenCache.filter(tc => tokenKeys.includes(tc.key));
+        const gradesBeingViewed = [...new Set(tokensBeingViewed.map(t => getNumericClass(t.kelas)))];
+        let studentsToDisplay = studentCache.filter(student => gradesBeingViewed.includes(getNumericClass(student.class)));
         
         const studentStatuses = new Map();
-
         studentsToDisplay.forEach(student => {
             const studentNumericClass = getNumericClass(student.class);
-            const tokenBeingViewed = tokenCache.find(t => t.key === examStatusFilterTokenKey);
-
-            if (!tokenBeingViewed || getNumericClass(tokenBeingViewed.kelas) !== studentNumericClass) {
-                studentStatuses.set(student.key, 'irrelevant');
+            const relevantToken = tokensBeingViewed.find(t => getNumericClass(t.kelas) === studentNumericClass);
+            if (!relevantToken) {
+                studentStatuses.set(student.key, '-');
                 return;
             }
-
-            const accessData = tokenAccessStatus[examStatusFilterTokenKey]?.[student.id];
-            const submissionData = submittedExamsCache[examStatusFilterTokenKey]?.[student.id];
-            
+            const relevantTokenKey = relevantToken.key;
+            const accessData = tokenAccessStatus[relevantTokenKey]?.[student.id];
+            const submissionData = submittedExamsCache[relevantTokenKey]?.[student.id];
             let status = 'Belum Login';
-            if (submissionData?.isSubmitted) {
-                status = 'Sudah submit';
-            } else if (accessData?.isLoggedIn) {
-                status = 'Sedang mengerjakan';
-            } else if (accessData?.accessCount > 0) {
-                status = 'Belum Login (reset)';
-            }
+            if (submissionData?.isSubmitted) { status = 'Sudah submit'; } 
+            else if (accessData?.isLoggedIn) { status = 'Sedang mengerjakan'; } 
+            else if (accessData?.accessCount > 0) { status = 'Belum Login (reset)'; }
             studentStatuses.set(student.key, status);
         });
-
-        studentsToDisplay = studentsToDisplay.filter(student => studentStatuses.get(student.key) !== 'irrelevant');
 
         const searchId = document.getElementById('studentSearchId').value.trim();
         if (searchId) studentsToDisplay = studentsToDisplay.filter(student => student.id.includes(searchId));
@@ -1630,6 +1652,7 @@
         const searchClass = document.getElementById('studentSearchClass').value.trim().toUpperCase();
         if (searchClass) studentsToDisplay = studentsToDisplay.filter(student => student.class.toUpperCase().includes(searchClass));
         
+        const studentOverallStatusFilterValue = studentOverallStatusFilter.value;
         if (studentOverallStatusFilterValue !== "ALL") {
             studentsToDisplay = studentsToDisplay.filter(student => studentStatuses.get(student.key) === studentOverallStatusFilterValue);
         }
@@ -1665,8 +1688,19 @@
                 </div></td>`;
             studentTableBody.appendChild(row);
         });
-        renderPaginationControls(studentPaginationDiv, currentPageStudent, totalPages, 'renderStudentTable');
+        renderPaginationControls(studentPaginationDiv, currentPageStudent, totalPages, 'renderStudentTableWithCurrentState');
     };
+    
+    window.renderStudentTableWithCurrentState = (page) => {
+        const selectedValue = examStatusFilterDropdown.value;
+        if (selectedValue === "DEFAULT") {
+             // This is tricky, we need to reconstruct the tokenKeys. Let's just re-init.
+             initializeStudentSectionView(); // This is the simplest way.
+        } else {
+            renderStudentTable([selectedValue], page);
+        }
+    }
+
 
     function renderPaginationControls(container, currentPage, totalPages, renderFunction) {
         container.innerHTML = '';
@@ -1688,7 +1722,7 @@
 
     window.updateItemsPerPage = (value) => {
         selectedItemsPerPage = parseInt(value, 10);
-        window.renderStudentTable(1);
+        handleStudentFilterChange();
         window.renderScoreTable(1);
     };
 
@@ -2076,16 +2110,23 @@
     };
     window.closeEmptyTokensModal = () => document.getElementById('emptyTokensModal').style.display = 'none';
     
-    function populateExamStatusFilter() {
-        examStatusFilterDropdown.innerHTML = '<option value="">PILIH TOKEN UJIAN</option>';
-        Array.from(consolidatedTokensMap.values())
-            .sort((a,b) => (a.subject.localeCompare(b.subject) || a.kelas.localeCompare(b.kelas)))
+    function populateExamStatusFilter(tokensToPopulate) {
+        const selectedValue = examStatusFilterDropdown.value;
+        examStatusFilterDropdown.innerHTML = '<option value="DEFAULT">Tampilan Default (Aktif)</option>';
+        tokensToPopulate
+            .sort((a, b) => (a.subject.localeCompare(b.subject) || a.kelas.localeCompare(b.kelas)))
             .forEach(token => {
                 const option = document.createElement('option');
-                option.value = Array.from(token.firebaseKeys)[0]; 
+                option.value = Array.from(token.firebaseKeys)[0];
                 option.innerText = `${token.token} (${token.subject} Kls ${token.kelas})`;
                 examStatusFilterDropdown.appendChild(option);
-        });
+            });
+
+        if ([...examStatusFilterDropdown.options].some(opt => opt.value === selectedValue)) {
+            examStatusFilterDropdown.value = selectedValue;
+        } else {
+            examStatusFilterDropdown.value = 'DEFAULT';
+        }
     }
     
     function generateAbbreviation(subjectName) {
@@ -2347,7 +2388,7 @@
     window.navigateToStudentManagement = (kelas) => {
         showSection('studentSection');
         document.getElementById('studentSearchClass').value = kelas;
-        initializeStudentSectionView();
+        handleStudentFilterChange();
     }
     
     window.performBackup = async () => {
