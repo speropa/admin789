@@ -24,7 +24,7 @@
       color: white;
       padding: 20px 0;
       box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-      display: flex;
+      display: none; /* Ubah menjadi none secara default */
       flex-direction: column;
       align-items: center;
       position: sticky;
@@ -38,6 +38,7 @@
     .sidebar.expanded {
       width: 200px;
       padding: 20px;
+      display: flex; /* Tetap flex saat expanded */
     }
     .main-content {
       flex-grow: 1;
@@ -174,7 +175,6 @@
     .icon-button:hover { background-color: #cfe2f3; transform: translateY(-1px); }
     .icon-button:active { transform: translateY(0); }
     .icon-button i { font-size: 16px; color: #2c3e50; }
-    .icon-button:hover i { color: #2c3e50; }
     .icon-button.edit i { color: #3498db; }
     .icon-button.delete i { color: #e74c3c; }
     .icon-button.reset i { color: #8e44ad; }
@@ -729,8 +729,8 @@
                 <input type="text" id="studentSearchClass" placeholder="Cari Kelas..." style="max-width: 150px;" />
                 <select id="itemsPerPageSelect" onchange="window.updateItemsPerPage(this.value)">
                     <option value="25">25 per halaman</option>
-                    <option value="50">50 per halaman</option>
-                    <option value="75" selected>75 per halaman</option>
+                    <option value="50" selected>50 per halaman</option>
+                    <option value="75">75 per halaman</option>
                     <option value="100">100 per halaman</option>
                     <option value="200">200 per halaman</option>
                     <option value="500">500 per halaman</option>
@@ -1013,9 +1013,13 @@
     let studentClassForAction = null;
     let currentTableIdToCopy = '';
 
-    let selectedItemsPerPage = 75;
-    let currentPageStudent = 1;
-    let currentPageScore = 1;
+    // Ambil dari localStorage atau default ke 50
+    let selectedItemsPerPage = parseInt(localStorage.getItem('selectedItemsPerPage') || '50', 10);
+    // Ambil dari localStorage atau default ke 1
+    let currentPageStudent = parseInt(localStorage.getItem('currentPageStudent') || '1', 10);
+    let currentPageScore = parseInt(localStorage.getItem('currentPageScore') || '1', 10);
+
+
     let filteredStudents = [];
     let filteredScores = [];
     let currentDefaultTokenKeys = [];
@@ -1077,6 +1081,9 @@
         document.body.style.alignItems = 'flex-start';
         document.body.style.justifyContent = 'flex-start';
 
+        // Setel nilai dropdown itemsPerPageSelect saat inisialisasi
+        itemsPerPageSelect.value = selectedItemsPerPage;
+
         loadTokens();
         loadStudents();
         loadTokenAccessStatus();
@@ -1127,6 +1134,12 @@
           document.body.style.alignItems = 'center';
           document.body.style.justifyContent = 'center';
       }
+      // Setel nilai dropdown itemsPerPageSelect saat DOMContentLoaded jika belum diatur
+      if (!localStorage.getItem('selectedItemsPerPage')) {
+          itemsPerPageSelect.value = '50';
+      } else {
+          itemsPerPageSelect.value = selectedItemsPerPage;
+      }
       attachEventListeners();
     });
 
@@ -1152,10 +1165,12 @@
         } else if (sectionId === 'examStatusSelectionSection') { // Inisialisasi bagian Status Ujian
             populateExamSelectionDropdowns();
         } else if (sectionId === 'studentSection') { 
-            renderStudentTableBasedOnSelection(); // Render tabel peserta berdasarkan pilihan token
+            // Kembali ke halaman terakhir yang dilihat, atau halaman 1 jika tidak ada
+            renderStudentTableBasedOnSelection(currentPageStudent);
         } else if (sectionId === 'scoreSection') {
             window.currentScoreGradeFilter = 'ALL';
-            resetScoreTable();
+            // Kembali ke halaman terakhir yang dilihat, atau halaman 1 jika tidak ada
+            renderScoreTable(currentPageScore);
         }
     };
 
@@ -1503,10 +1518,10 @@
                         return nameA.localeCompare(nameB);
                     });
                     if (document.getElementById('studentSection').style.display === 'block') {
-                         renderStudentTableBasedOnSelection(); // Render berdasarkan pilihan token
+                         renderStudentTableBasedOnSelection(currentPageStudent); // Render berdasarkan pilihan token
                     }
                     if (document.getElementById('scoreSection').style.display === 'block') {
-                        resetScoreTable();
+                        renderScoreTable(currentPageScore); // Render berdasarkan halaman saat ini
                     }
                 }, (error) => console.error(`Error memuat siswa dari grup ${dbName}:`, error));
             }
@@ -1514,7 +1529,8 @@
     }
 
     window.renderStudentTable = (tokenKeysForDisplay, page = 1) => {
-        currentPageStudent = page;
+        currentPageStudent = page; // Perbarui currentPageStudent
+        localStorage.setItem('currentPageStudent', currentPageStudent); // Simpan ke localStorage
 
         const isViewingSpecificExam = tokenKeysForDisplay && tokenKeysForDisplay.length > 0;
 
@@ -1681,8 +1697,9 @@
     }
     window.updateItemsPerPage = (value) => {
         selectedItemsPerPage = parseInt(value, 10);
-        renderStudentTableBasedOnSelection(); // Render ulang dengan item per halaman baru
-        window.renderScoreTable(1);
+        localStorage.setItem('selectedItemsPerPage', selectedItemsPerPage); // Simpan ke localStorage
+        renderStudentTableBasedOnSelection(1); // Kembali ke halaman 1 saat mengubah item per halaman
+        window.renderScoreTable(1); // Kembali ke halaman 1 saat mengubah item per halaman
     };
     async function handleAddStudent(e) {
         e.preventDefault();
@@ -1772,7 +1789,7 @@
     window.closeEmptyStudentsModal = () => document.getElementById('emptyStudentsModal').style.display = 'none';
     window.promptLogout = () => document.getElementById('logoutConfirmModal').style.display = 'flex';
     window.closeLogoutModal = () => document.getElementById('logoutConfirmModal').style.display = 'none';
-    window.confirmLogout = () => { localStorage.removeItem('isAdminLoggedIn'); localStorage.removeItem('lastSelectedTokens'); location.reload(); }; // Hapus juga token terakhir saat logout
+    window.confirmLogout = () => { localStorage.removeItem('isAdminLoggedIn'); localStorage.removeItem('lastSelectedTokens'); localStorage.removeItem('selectedItemsPerPage'); localStorage.removeItem('currentPageStudent'); localStorage.removeItem('currentPageScore'); location.reload(); }; // Hapus juga semua state pagination saat logout
     window.closeResetStudentModal = () => { document.getElementById('resetStudentModal').style.display = 'none'; studentKeyForAction = null; };
     window.closeSubmitAnswerModal = () => { document.getElementById('submitAnswerModal').style.display = 'none'; studentKeyForAction = null; };
     window.closeDeleteAnswerModal = () => { document.getElementById('deleteAnswerModal').style.display = 'none'; studentKeyForAction = null; };
@@ -2085,7 +2102,9 @@
     }
 
     window.renderScoreTable = (page = 1) => {
-        currentPageScore = page;
+        currentPageScore = page; // Perbarui currentPageScore
+        localStorage.setItem('currentPageScore', currentPageScore); // Simpan ke localStorage
+
         if (window.currentScoreGradeFilter === 'ALL') {
             resetScoreTable();
             return;
@@ -2130,7 +2149,7 @@
                 let score = '-';
                 const tokenInfo = Array.from(consolidatedTokensMap.values()).find(t => t.subject === subject && getNumericClass(t.kelas) === getNumericClass(student.class));
                 if (tokenInfo) {
-                    for (const fbKey of Array.from(tokenInfo.firebaseKeys)) {
+                    for (const fbKey of Array.from(tokenInfo.firebaseKeys)){
                          const isSubmitted = submittedExamsCache[fbKey]?.[student.id]?.isSubmitted;
                          if (isSubmitted) {
                              const answerData = studentAnswersCache[fbKey]?.[student.id];
@@ -2601,10 +2620,12 @@
     // Fungsi baru untuk merender tabel peserta berdasarkan token yang dipilih dari lastSelectedTokens
     window.renderStudentTableBasedOnSelection = (page = 1) => {
         const allSelectedTokenFirebaseKeys = [];
+        let anyTokenSelected = false;
 
         for (const grade in lastSelectedTokens) {
             const selectedTokenIdentifier = lastSelectedTokens[grade]; // Format: TOKEN_KELAS atau DEFAULT
             if (selectedTokenIdentifier !== 'DEFAULT') {
+                anyTokenSelected = true;
                 const [tokenValue, kelasValue] = selectedTokenIdentifier.split('_');
 
                 // Cari token terkonsolidasi yang cocok dengan identifier ini
@@ -2618,8 +2639,14 @@
                 }
             }
         }
-        // Jika tidak ada token yang dipilih, allSelectedTokenFirebaseKeys akan kosong,
-        // yang akan menyebabkan renderStudentTable menampilkan tabel dasar.
+        
+        // Atur display pesan berdasarkan apakah ada token yang disimpan
+        if (anyTokenSelected) {
+            studentTableDescription.style.display = 'none';
+        } else {
+            studentTableDescription.style.display = 'block';
+        }
+
         renderStudentTable(allSelectedTokenFirebaseKeys, page);
     };
   </script>
