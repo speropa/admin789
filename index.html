@@ -895,7 +895,6 @@
   <div id="forceInactiveModal" class="modal"><div class="modal-content"><h4>Nonaktifkan Mode Paksa?</h4><p>Token akan kembali ke pengaturan jadwal semula.</p><button onclick="confirmForceInactive()" class="confirm-button">Ya, Nonaktifkan</button><button onclick="closeForceInactiveModal()" class="cancel-button">Batal</button></div></div>
   <div id="notification"><span id="notificationMessage"></span></div>
   <div id="copyPrintModal" class="modal"><div class="modal-content"><h4 id="copyPrintModalTitle"></h4><button onclick="copyTableToClipboard()" class="confirm-button">Salin Tabel</button><p style="font-size: 0.9em; color: #555; margin-top: 15px;">Salin tabel kemudian paste ke word atau excel.</p><button onclick="closeCopyPrintModal()" class="cancel-button">Batal</button></div></div>
-  <div id="printInfoModal" class="modal"><div class="modal-content"><span class="close-button" onclick="closePrintInfoModal()">×</span><p style="margin-bottom: 20px;">Maaf, sementara cetak kartu belum bisa. Silahkan download 2 file excel dan word dibawah ini:</p><p style="margin-bottom: 10px;"><a href="https://drive.google.com/uc?export=download&id=1rLFyKUzQloJi7LAnO-x7Q-lK0BzdxQv3" target="_blank">File Word (disini)</a></p><p style="margin-bottom: 20px;"><a href="https://drive.google.com/uc?export=download&id=14uoOXQScECxd9hXD4AIMJjFBlmbSAgxS" target="_blank">File Excel (disini)</a></p><p style="font-size: 14px; color: #555;">**Catatan:** ISI ID_SISWA SESUAI DENGAN TEMPLATE CSV!</p></div></div>
   <div id="setlokasiModal" class="modal"><div class="modal-content" style="text-align: center;"><h4>Pengaturan Lokasi</h4><button onclick="aktifkanLokasi()" class="confirm-button">Aktifkan</button><button onclick="openGantiRadiusModal()" class="warning-button">Ganti Radius</button><button onclick="nonaktifkanLokasi()" class="cancel-button">Nonaktifkan</button><button onclick="closeSetlokasiModal()" class="gray text-button" style="margin-top: 10px;">Batal</button></div></div>
   <div id="gantiRadiusModal" class="modal"><div class="modal-content"><h4>Ganti Radius Lokasi (meter)</h4><label for="radiusMeter">Radius (meter):</label><input type="number" id="radiusMeter" placeholder="Contoh: 75" required /><div style="text-align: center; margin-top: 10px;"><button onclick="gantiRadiusDanAktifkan()" class="confirm-button">Ganti & Aktifkan</button><button onclick="closeGantiRadiusModal()" class="cancel-button">Batal</button></div></div></div>
   <div id="setLockModal" class="modal"><div class="modal-content" style="text-align: center;"><h4>Pengaturan Kunci</h4><button onclick="aktifkanKunci()" class="confirm-button">Aktifkan</button><button onclick="openGantiKunciBatasModal()" class="warning-button">Ganti Kunci/Batas</button><button onclick="nonaktifkanKunci()" class="cancel-button">Nonaktifkan</button><button onclick="closeSetLockModal()" class="gray text-button" style="margin-top: 10px;">Batal</button></div></div>
@@ -1786,8 +1785,12 @@
     window.closeResetStudentModal = () => { document.getElementById('resetStudentModal').style.display = 'none'; studentKeyForAction = null; };
     window.closeSubmitAnswerModal = () => { document.getElementById('submitAnswerModal').style.display = 'none'; studentKeyForAction = null; };
     window.closeDeleteAnswerModal = () => { document.getElementById('deleteAnswerModal').style.display = 'none'; studentKeyForAction = null; };
-    window.showPrintInfoModal = () => { document.getElementById('printInfoModal').style.display = 'flex'; };
-    window.closePrintInfoModal = () => { document.getElementById('printInfoModal').style.display = 'none'; };
+    
+    // Updated function for "Cetak Kartu" button
+    window.showPrintInfoModal = () => {
+        window.open('https://speropa.github.io/cetakkartu', '_blank');
+    };
+
     window.openCopyPrintModal = (tableId, modalTitle) => { currentTableIdToCopy = tableId; document.getElementById('copyPrintModalTitle').innerText = modalTitle; document.getElementById('copyPrintModal').style.display = 'flex'; };
     window.closeCopyPrintModal = () => { document.getElementById('copyPrintModal').style.display = 'none'; };
     window.copyTableToClipboard = () => {
@@ -1811,7 +1814,7 @@
         } else if (currentTableIdToCopy === 'scoreTable') {
             let studentsForCopy = studentCache;
             if (window.currentScoreGradeFilter !== 'ALL') {
-                studentsForCopy = studentCache.filter(s => getNumericClass(s.class) === window.currentScoreGradeFilter);
+                studentsForCopy = studentsForCopy.filter(s => getNumericClass(s.class) === window.currentScoreGradeFilter);
             }
             const scoreSearchName = document.getElementById('scoreSearchName').value.trim().toUpperCase();
             if (scoreSearchName) studentsForCopy = studentsForCopy.filter(student => student.name.toUpperCase().includes(scoreSearchName));
@@ -2531,7 +2534,7 @@
 
                 if (activeTokensForGrade.length > 0) {
                     activeTokensForGrade.sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
-                    const bestToken = activeTokensForGrade.find(t => new Date(t.startTime) <= now) || activeTokensForGrade[0];
+                    const bestToken = activeTokensForGrade.find(t => new Date(t.startTime) <= now) || activeTokens[0];
                     if (bestToken) {
                         lastSelectedTokens[grade] = `${bestToken.token}_${bestToken.kelas}`;
                     }
